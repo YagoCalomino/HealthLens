@@ -61,7 +61,7 @@ Every environment-specific value (`DATABASE_URL`, `CORS_ORIGINS`,
 `localhost`. That was a day-one constraint because it's the difference between
 "runs on my machine" and "deployable without a rewrite."
 
-One more thing I learned the hard way: `pysus` 2.2.0 (the version I started with) concatenates the SIH-RD
+One more thing I learned the hard way: `pysus` 2.2.0 (the version I started with; the project now pins 2.7.0) concatenates the SIH-RD
 (AIH/admission) and SIH-SP (procedure) record groups into a single DataFrame.
 `SP_TIPO` looks like the obvious incident-admission flag, but it belongs only
 to the SP group and is always null on genuine AIH rows. Filtering on it
@@ -194,7 +194,7 @@ Claude Code wrote a large share of the implementation under my direction.
 The decisions that shaped the project were mine: data modeling, the DataSUS
 domain quirks (`IDENT=1` filtering in SIH, SIM revision cycles, the population
 fan-out bug fixed in migration 0015), and the validation of every result
-against the real numbers. The notebooks reflect genuine analysis, including
+against the real numbers. The notebooks reflect honest analysis, including
 a forecasting model that underperforms the naive baseline, explained, and a
 clustering silhouette of 0.15 reported as-is.
 

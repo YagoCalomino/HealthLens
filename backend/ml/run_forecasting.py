@@ -197,13 +197,13 @@ def _run_autoarima(
 ) -> dict:
     """Run AutoARIMA (or fallback) per municipality and collect forecast rows.
 
-    Training window: 2015-2021 (7 obs).
+    Model-selection window: 2015-2021 (7 obs); final fit: training 2015-2024, forecast 2025-2027.
     Backtest: cross_validation with n_windows=1, h=2 (validates on 2022-2023).
-    Final forecast: h=3 (produces anos 2024, 2025, 2026).
-    Assertion before DB write: fc['ds'].dt.year.tolist() == [2024, 2025, 2026].
+    Final forecast: h=3 (produces anos 2025, 2026, 2027).
+    Forecast years are checked before the DB write; a mismatch is logged, not rejected.
 
     Args:
-        df_all: Full series DataFrame (all municipalities, 2015-2023).
+        df_all: Full series DataFrame (all municipalities, 2015-2024).
         conn: Live psycopg2 connection.
         local_id_map: dict mapping codigo_ibge_6 → dim_local.id.
         batch: Mutable list to accumulate rows (flushed by caller or here).
