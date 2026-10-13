@@ -1,0 +1,90 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+.mypy_cache/
+*.egg/
+build/
+.ruff_cache/
+
+# Data — raw DataSUS files never committed
+data/raw/
+**/data/raw/
+*.dbc
+
+# Generated catalog-scan artifacts (operator-run, not source)
+available_sim.txt
+available_sih.txt
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+
+# Backups
+*.bak
+
+# AI tooling and local artifacts
+.claude/
+.planning/
+CLAUDE.md
+
+# Debug and patch scripts
+debug_audit.py
+debug_pages.py
+patch_curva.py
+patch_mun_summary.py
+check_progress.py
+verify_coverage.py
+resp_deng.json
+
+# Stale docs
+README_old.md
+
+# Backend debug/check scripts
+backend/check2.py
+backend/check3.py
+backend/check4.py
+backend/check5.py
+backend/check_data.py
+backend/check_docker_db.py
+backend/check_forecasts.py
+backend/fix_deng_audit.py
+backend/restore_audit.py
+# Notebook outputs
+notebooks/nb_test/
+
+# Notebook outputs
+notebooks/nb_test/

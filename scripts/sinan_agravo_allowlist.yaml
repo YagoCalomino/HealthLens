@@ -1,0 +1,67 @@
+# SINAN completeness allowlist.
+#
+# scripts/assert_sinan_completeness.py checks every (AGRAVO, ano) unit in the
+# configured grid against fato_notificacoes. This file documents the two
+# kinds of exception the check tolerates without flagging an unexplained gap:
+#
+#   known_absent  -- a [AGRAVO, ano] pair confirmed to have NO file at all in
+#     the DataSUS SINAN catalog for that agravo/year. Entries here are
+#     skipped entirely by the completeness check (both the presence check
+#     and the row-count-cliff check).
+#
+#   known_partial -- a [AGRAVO, ano] pair whose file exists and loads, but is
+#     a preliminary (DADOS/PRELIM) snapshot rather than a closed annual
+#     (DADOS/FINAIS) file, so its row count is legitimately far below the
+#     surrounding years'. Entries here still must satisfy the minimum-row
+#     check (the file did load real rows) but are exempted from the
+#     row-count-cliff check only.
+#
+# Before adding an entry:
+#   1. Confirm the absence or partiality against real evidence -- re-run
+#      `make spike-pysus-sinan` and compare the observed per-(agravo, year)
+#      row counts against the surrounding years. There is no `scan-sinan`
+#      catalog-scanning script (unlike SIH's scan_sih_catalog.py): pysus's
+#      `list_files()` helper crashed the interpreter when called repeatedly
+#      in a loop on Windows during research, so the spike
+#      script's actual data fetch is the reliable evidence path instead of a
+#      catalog-listing script.
+#   2. Add the entry below with an inline comment recording HOW and WHEN the
+#      absence/partiality was confirmed (date + method + observed row
+#      count), e.g.:
+#        - [ANIM, 2023]  # confirmed via pysus-270-sinan-spike-findings.md, 2026-08-01: 10,000 rows
+#   3. Never add an entry "just to make the check pass" -- an unexplained
+#      entry here defeats the entire purpose of the completeness assertion
+#      (masking a real ingestion gap instead of surfacing it).
+#
+# Data-lifecycle context: the SINAN spike
+# (docs/pysus-270-sinan-spike-findings.md, run 2026-08-01) live-confirmed
+# that recent SINAN years live under DataSUS's DADOS/PRELIM path rather than
+# DADOS/FINAIS, and that this is a genuine data-lifecycle characteristic, not
+# a pysus or project bug. ANIM 2023 returned only 10,000 rows against ANIM
+# 2022's ~298,821 rows -- a ~30x drop entirely explained by
+# the PRELIM snapshot being small at spike time, not a real ingestion gap.
+known_partial:
+  # Most recent grid year (2024) not yet re-verified by the SINAN spike
+  # (which used 2023 defaults) but expected preliminary for all three
+  # agravos by the same DADOS/PRELIM lifecycle pattern documented above --
+  # confirmed via pysus-270-sinan-spike-findings.md's "Data-lifecycle
+  # caveat" section, 2026-08-01.
+  - [DENG, 2024]  # expected preliminary — DADOS/PRELIM lifecycle, confirmed via pysus-270-sinan-spike-findings.md, 2026-08-01
+  - [CHIK, 2024]  # expected preliminary — DADOS/PRELIM lifecycle, confirmed via pysus-270-sinan-spike-findings.md, 2026-08-01
+  - [ANIM, 2024]  # expected preliminary — DADOS/PRELIM lifecycle, confirmed via pysus-270-sinan-spike-findings.md, 2026-08-01
+  # ANIM's directly observed row-count cliff: 10,000 rows vs ANIM 2022's
+  # ~298,821 rows, reconfirmed live by the SINAN spike --
+  # see pysus-270-sinan-spike-findings.md "Data-lifecycle caveat" section,
+  # run 2026-08-01.
+  - [ANIM, 2023]  # confirmed via pysus-270-sinan-spike-findings.md, 2026-08-01: 10,000 rows vs ANIM 2022's ~298,821 rows
+
+# The pipeline does not run the full 3-agravo x N-year grid itself
+# (the full ingestion is an operator-run step). This list ships empty; the operator populates it after
+# their real full ingestion run, once a genuinely absent (AGRAVO, ano)
+# combo is confirmed (not merely a preliminary/partial file, which belongs
+# under known_partial above).
+known_absent:
+  - [DENG, 2021]  # confirmed absent from DataSUS catalog — pipeline run 2026-10-02: 0 files found
+  - [DENG, 2022]  # confirmed absent from DataSUS catalog — pipeline run 2026-10-02: 0 files found
+  - [CHIK, 2017]  # confirmed absent from DataSUS catalog — pipeline re-run 2026-10-02: 0 files found; n=12 rows in DB are prior-ingest spillover
+  - [CHIK, 2019]  # confirmed absent from DataSUS catalog — pipeline re-run 2026-10-02: 0 files found; n=178 rows in DB are prior-ingest spillover

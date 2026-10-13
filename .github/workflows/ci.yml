@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  SAMPLE_MODE: "true"
+  CORS_ORIGINS: "http://localhost:5173"
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint with ruff
+        run: ruff check . && ruff format --check .
+
+      - name: Type check with mypy
+        run: mypy app etl ml
+
+      - name: Run tests (sample mode, no PostgreSQL)
+        run: pytest tests/ -v --tb=short --cov=app --cov=ml --cov=etl --cov-report=xml --cov-report=term-missing --cov-fail-under=70
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+        continue-on-error: true  # coverage upload failure should not block CI
+
+  backend-migrations:
+    name: Alembic Migration Check
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: healthlens
+          POSTGRES_PASSWORD: healthlens
+          POSTGRES_DB: healthlens
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL_SYNC: postgresql://healthlens:healthlens@localhost:5432/healthlens
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run migrations
+        run: alembic upgrade head
+
+      - name: Check no pending migrations
+        run: alembic check
+
+  query-budgets:
+    name: Query Time Budgets
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: healthlens
+          POSTGRES_PASSWORD: healthlens
+          POSTGRES_DB: healthlens
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL_SYNC: postgresql://healthlens:healthlens@localhost:5432/healthlens
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run migrations
+        run: alembic upgrade head
+
+      - name: Seed reference data
+        run: |
+          python -m seeds.cid10_loader
+          python -m seeds.ibge_loader
+          python -m seeds.tcu_loader
+          python -m seeds.faixa_etaria_loader
+
+      - name: Load sample data into Postgres
+        run: SAMPLE_MODE=true python -m etl.pipeline
+
+      - name: Check query-time budgets
+        working-directory: .
+        run: python scripts/check_query_budgets.py
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build
+        env:
+          VITE_API_BASE_URL: http://localhost:8000
+        run: npm run build
+
+      - name: Test
+        run: npm test

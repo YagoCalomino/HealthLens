@@ -1,0 +1,17 @@
+[run]
+# SQLAlchemy's async engine runs on greenlets; without this, lines after an
+# awaited query are not traced and covered route code is reported as missed.
+concurrency = greenlet, thread
+source = app, ml, etl
+omit =
+    etl/pipeline.py
+    ml/run_forecasting.py
+    ml/run_clustering.py
+    etl/sample_loader.py
+    scripts/*
+    seeds/*
+    tests/*
+
+[report]
+show_missing = True
+skip_covered = False

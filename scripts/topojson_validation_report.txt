@@ -1,0 +1,42 @@
+TopoJSON / GeoJSON validation report
+============================================================
+Discovered property names: municipality id field='id', UF sigla field='sigla', UF code field='codigo_ibg'
+File format: binary-arc TopoJSON topology (Topology + objects[...].geometries) — see frontend/src/lib/topojson.ts for the consumption contract.
+
+DB connection: NOT AVAILABLE — code-format check only (no DB diff)
+
+-- br-ufs.json --
+UF features: 27 (expected 27)
+  All UF codes are 2-digit numeric.
+
+-- uf/{SIGLA}.json --
+AC: 22 municipality codes extracted
+AL: 102 municipality codes extracted
+AM: 62 municipality codes extracted
+AP: 16 municipality codes extracted
+BA: 417 municipality codes extracted
+CE: 184 municipality codes extracted
+DF: 1 municipality codes extracted
+ES: 78 municipality codes extracted
+GO: 246 municipality codes extracted
+MA: 217 municipality codes extracted
+MG: 853 municipality codes extracted
+MS: 78 municipality codes extracted
+MT: 141 municipality codes extracted
+PA: 143 municipality codes extracted
+PB: 223 municipality codes extracted
+PE: 185 municipality codes extracted
+PI: 223 municipality codes extracted
+PR: 399 municipality codes extracted
+RJ: 92 municipality codes extracted
+RN: 167 municipality codes extracted
+RO: 52 municipality codes extracted
+RR: 15 municipality codes extracted
+RS: 496 municipality codes extracted
+SC: 293 municipality codes extracted
+SE: 75 municipality codes extracted
+SP: 645 municipality codes extracted
+TO: 139 municipality codes extracted
+
+Total municipality codes extracted: 5564 (expected ~5570)
+DB diff skipped — set DATABASE_URL_SYNC and ensure the DB is reachable to compare against dim_local.codigo_ibge_7.

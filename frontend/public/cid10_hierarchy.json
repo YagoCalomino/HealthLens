@@ -1,0 +1,114 @@
+{
+  "capitulos": [
+    {
+      "id": "I",
+      "descricao": "Algumas doenças infecciosas e parasitárias",
+      "grupos": []
+    },
+    {
+      "id": "II",
+      "descricao": "Neoplasias (tumores)",
+      "grupos": []
+    },
+    {
+      "id": "III",
+      "descricao": "Doenças do sangue e dos órgãos hematopoéticos e alguns transtornos imunitários",
+      "grupos": []
+    },
+    {
+      "id": "IV",
+      "descricao": "Doenças endócrinas, nutricionais e metabólicas",
+      "grupos": []
+    },
+    {
+      "id": "V",
+      "descricao": "Transtornos mentais e comportamentais",
+      "grupos": []
+    },
+    {
+      "id": "VI",
+      "descricao": "Doenças do sistema nervoso",
+      "grupos": []
+    },
+    {
+      "id": "VII",
+      "descricao": "Doenças do olho e anexos",
+      "grupos": []
+    },
+    {
+      "id": "VIII",
+      "descricao": "Doenças do ouvido e da apófise mastóide",
+      "grupos": []
+    },
+    {
+      "id": "IX",
+      "descricao": "Doenças do aparelho circulatório",
+      "grupos": []
+    },
+    {
+      "id": "X",
+      "descricao": "Doenças do aparelho respiratório",
+      "grupos": []
+    },
+    {
+      "id": "XI",
+      "descricao": "Doenças do aparelho digestivo",
+      "grupos": []
+    },
+    {
+      "id": "XII",
+      "descricao": "Doenças da pele e do tecido subcutâneo",
+      "grupos": []
+    },
+    {
+      "id": "XIII",
+      "descricao": "Doenças do sistema osteomuscular e do tecido conjuntivo",
+      "grupos": []
+    },
+    {
+      "id": "XIV",
+      "descricao": "Doenças do aparelho geniturinário",
+      "grupos": []
+    },
+    {
+      "id": "XV",
+      "descricao": "Gravidez, parto e puerpério",
+      "grupos": []
+    },
+    {
+      "id": "XVI",
+      "descricao": "Algumas afecções originadas no período perinatal",
+      "grupos": []
+    },
+    {
+      "id": "XVII",
+      "descricao": "Malformações congênitas, deformidades e anomalias cromossômicas",
+      "grupos": []
+    },
+    {
+      "id": "XVIII",
+      "descricao": "Sintomas, sinais e achados anormais de exames clínicos e laboratoriais",
+      "grupos": []
+    },
+    {
+      "id": "XIX",
+      "descricao": "Lesões, envenenamentos e outras consequências de causas externas",
+      "grupos": []
+    },
+    {
+      "id": "XX",
+      "descricao": "Causas externas de morbidade e mortalidade",
+      "grupos": []
+    },
+    {
+      "id": "XXI",
+      "descricao": "Fatores que influenciam o estado de saúde e o contato com os serviços de saúde",
+      "grupos": []
+    },
+    {
+      "id": "XXII",
+      "descricao": "Códigos para propósitos especiais",
+      "grupos": []
+    }
+  ]
+}
