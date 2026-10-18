@@ -1,0 +1,41 @@
+# SIH completeness allowlist.
+#
+# Each entry under `known_absent` is a [UF, ano] pair confirmed genuinely
+# absent from the DataSUS DuckLake catalog -- not a pipeline bug, not a
+# transient network failure, and not a shortcut to make
+# `scripts/assert_sih_completeness.py` pass without investigation.
+#
+# Before adding an entry:
+#   1. Confirm the absence with `python scripts/scan_sih_catalog.py` (or an
+#      equivalent manual catalog query) for that exact UF/year.
+#   2. Add the entry below with an inline comment recording HOW and WHEN the
+#      absence was confirmed (date + method), e.g.:
+#        - [SP, 2005]  # confirmed absent via scan_sih_catalog.py, 2026-08-01
+#   3. Never add an entry "just to make the check pass" -- an unexplained
+#      entry here defeats the entire purpose of the completeness assertion
+#      (masking a real ingestion gap instead of surfacing it).
+#
+# The pipeline does not scan the full 27x15 grid itself (the full
+# re-ingestion is an operator-run step), so the list started empty. The operator
+# populates it after their real `make full` run, if the catalog genuinely has
+# no RD files for specific UF/year combos.
+known_absent:
+  # SP: only 2010 and 2023 have RD files in the pysus 2.7.0 DuckLake catalog.
+  # Confirmed via the operator's full 27x15 `make full` run; files present for
+  # the years below are SP-schema (36 cols, no IDENT) -- correctly skipped by
+  # _fetch_sih_rd's filename-prefix filter, not an ingestion failure. See
+  # docs/pysus-270-spike-findings.md "Full-scale re-ingestion -- catalog
+  # coverage gaps" for details. Confirmed 2026-07-25.
+  - [SP, 2011]
+  - [SP, 2012]
+  - [SP, 2013]
+  - [SP, 2014]
+  - [SP, 2015]
+  - [SP, 2016]
+  - [SP, 2017]
+  - [SP, 2018]
+  - [SP, 2019]
+  - [SP, 2020]
+  - [SP, 2021]
+  - [SP, 2022]
+  - [SP, 2024]

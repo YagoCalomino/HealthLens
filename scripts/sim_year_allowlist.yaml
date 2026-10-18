@@ -1,0 +1,53 @@
+# SIM completeness allowlist.
+#
+# Each entry under `known_absent` is a [UF, ano] pair confirmed genuinely
+# absent from the DataSUS DuckLake catalog -- not a pipeline bug, not a
+# transient network failure, and not a shortcut to make
+# `scripts/assert_sim_completeness.py` pass without investigation.
+#
+# Before adding an entry:
+#   1. Confirm the absence with `python scripts/scan_sim_catalog.py` (or an
+#      equivalent manual catalog query) for that exact UF/year.
+#   2. Add the entry below with an inline comment recording HOW and WHEN the
+#      absence was confirmed (date + method), e.g.:
+#        - [SP, 2005]  # confirmed absent via scan_sim_catalog.py, 2026-08-01
+#   3. Never add an entry "just to make the check pass" -- an unexplained
+#      entry here defeats the entire purpose of the completeness assertion
+#      (masking a real ingestion gap instead of surfacing it).
+#
+# The SIM 2024 re-ingestion started with 373 of 405 SIM_{uf}_{ano}.parquet
+# files already cached locally but did NOT pre-populate this list --
+# whether the 32 uncached combos are genuine catalog absences or simply
+# never-downloaded units is exactly what the full `make full` run
+# resolves. The operator populates this list after that run, only for
+# combos scan_sim_catalog.py confirms are absent from the catalog.
+known_absent:
+  - [AL, 2013]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [AP, 2018]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [BA, 2012]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [CE, 2014]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [CE, 2021]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [CE, 2022]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [ES, 2013]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [MG, 2015]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [MG, 2018]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [MT, 2016]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [MT, 2017]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PA, 2020]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PE, 2014]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PE, 2018]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PE, 2020]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PE, 2021]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PE, 2022]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PE, 2024]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PR, 2010]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PR, 2012]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [PR, 2013]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [RJ, 2024]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [RO, 2021]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [RS, 2013]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [SC, 2016]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [SC, 2018]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [SP, 2011]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [SP, 2016]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
+  - [SP, 2024]  # confirmed absent via scan_sim_catalog.py, 2026-07-25
