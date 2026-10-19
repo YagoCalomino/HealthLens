@@ -25,6 +25,7 @@ available_sih.txt
 .env
 .env.local
 .env.*.local
+.env.prod
 
 # Node
 node_modules/
