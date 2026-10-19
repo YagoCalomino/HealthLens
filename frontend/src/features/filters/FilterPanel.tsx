@@ -425,7 +425,7 @@ export function FilterPanel(): React.ReactElement {
             store.setAnoFim(fim);
           }}
           min={2010}
-          max={2024}
+          max={2025}
         />
       </div>
     </nav>

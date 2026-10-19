@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
 export const DEFAULT_ANO_INICIO = 2010;
-export const DEFAULT_ANO_FIM = 2024;
+export const DEFAULT_ANO_FIM = 2025;
 
 export interface FilterState {
   indicador: 'SIM' | 'SIH';

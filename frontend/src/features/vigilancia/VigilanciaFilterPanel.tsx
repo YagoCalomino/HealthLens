@@ -266,7 +266,7 @@ export function VigilanciaFilterPanel(): React.ReactElement {
             store.setAnoFim(fim);
           }}
           min={2015}
-          max={2024}
+          max={2025}
         />
       </div>
     </nav>
