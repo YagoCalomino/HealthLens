@@ -9,16 +9,18 @@ SIH_UFS = AC,AL,AM,AP,BA,CE,DF,ES,GO,MA,MG,MS,MT,PA,PB,PE,PI,PR,RJ,RN,RO,RR,RS,S
 SIM_ANOS = 2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024
 SIH_ANOS = 2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025
 
-# Overridable full-run scope (3 agravos x 2015-2024 = 30 national download
-# units). The grid is 3 agravos x 10 years -- NOT 3 x 27 UFs: pysus.sinan()
+# Overridable full-run scope (3 agravos x 2015-2025 = 33 national download
+# units). The grid is 3 agravos x 11 years -- NOT 3 x 27 UFs: pysus.sinan()
 # has no state= parameter (live-verified, docs/pysus-270-sinan-spike-findings.md),
 # so every download is already one national file spanning all 27 UFs. There is
 # therefore deliberately no SINAN_UFS variable -- scoping a rehearsal means
 # fewer agravos or years, never fewer UFs. Override on the command line for a
 # scoped rehearsal, e.g.:
 #   make ingest-sinan SINAN_AGRAVOS=ANIM SINAN_ANOS=2023
+# ANIM 2025 is still preliminary (DADOS/PRELIM) and is listed under
+# known_partial in scripts/sinan_agravo_allowlist.yaml.
 SINAN_AGRAVOS = DENG,CHIK,ANIM
-SINAN_ANOS = 2015,2016,2017,2018,2019,2020,2021,2022,2023,2024
+SINAN_ANOS = 2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025
 
 # Cluster snapshot years: run_clustering.py's --ano-referencia is
 # required with no default, so a snapshot re-run means one
@@ -64,7 +66,7 @@ seed-cid10: validate-env
 # audit_ingestao.hash_md5 dedup, so a partial run never re-downloads or re-loads
 # completed units. See docs/sih-reingestion-runbook.md for the full operator procedure.
 # Also runs the SINAN pass (SINAN_AGRAVOS x SINAN_ANOS, default: 3 agravos x
-# 2015-2024 = 30 units) via the ingest-sinan sub-make target. SINAN's year
+# 2015-2025 = 33 units) via the ingest-sinan sub-make target. SINAN's year
 # range is independent of SIM_ANOS/SIH_ANOS -- it is not coupled to the passes above,
 # since python -m etl.pipeline takes a single --ano list per invocation and
 # the two sources have different, independently-overridable year ranges. See
@@ -123,7 +125,7 @@ spike-pysus-sinan:
 # SINAN-only ingestion pass, kept separate from the SIM/SIH pass above because
 # python -m etl.pipeline takes a single --ano list per invocation and SINAN's
 # year range (SINAN_ANOS) is independent of SIH's (SIH_ANOS). Iterates
-# SINAN_AGRAVOS x SINAN_ANOS (default: 3 agravos x 2015-2024 = 30 national
+# SINAN_AGRAVOS x SINAN_ANOS (default: 3 agravos x 2015-2025 = 33 national
 # download units). Resumable: interrupt and re-run -- already-audited
 # (agravo, ano) units are skipped via audit_ingestao.hash_md5 dedup, so a
 # partial run never re-downloads or re-loads completed units. See

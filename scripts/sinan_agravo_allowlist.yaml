@@ -54,6 +54,9 @@ known_partial:
   # see pysus-270-sinan-spike-findings.md "Data-lifecycle caveat" section,
   # run 2026-08-01.
   - [ANIM, 2023]  # confirmed via pysus-270-sinan-spike-findings.md, 2026-08-01: 10,000 rows vs ANIM 2022's ~298,821 rows
+  # dados preliminares: on 2026-10-19 ANIMBR25.dbc exists only under
+  # SINAN/DADOS/PRELIM on the DataSUS FTP (DENGBR25/CHIKBR25 are in FINAIS).
+  - [ANIM, 2025]  # dados preliminares — DADOS/PRELIM only, FTP listing 2026-10-19
 
 # The pipeline does not run the full 3-agravo x N-year grid itself
 # (the full ingestion is an operator-run step). This list ships empty; the operator populates it after
