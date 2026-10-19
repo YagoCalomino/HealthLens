@@ -324,6 +324,9 @@ def run_pipeline(
     #    autocommit=True per step to avoid DiskFull on free-tier Neon.
     # ------------------------------------------------------------------
     logger.info("Refreshing aggregation tables...")
+    # When no unit was loaded, the DimCache/_already_loaded SELECTs leave a
+    # read transaction open and psycopg2 refuses the autocommit switch.
+    conn.commit()
     _orig_ac = conn.autocommit
     conn.autocommit = True
     cur = conn.cursor()

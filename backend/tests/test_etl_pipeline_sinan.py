@@ -325,6 +325,60 @@ def test_sih_only_skips_sim_and_runs_sih(_mock_collaborators):
 
 
 # ---------------------------------------------------------------------------
+# Zero units loaded: the open read transaction must be committed before the
+# aggregate refresh switches to autocommit (psycopg2 raises otherwise)
+# ---------------------------------------------------------------------------
+
+
+class _TxStrictConn:
+    """Mimics psycopg2: any cursor use opens a transaction, and setting
+    autocommit while a transaction is open raises ProgrammingError."""
+
+    def __init__(self):
+        self._autocommit = False
+        self.in_tx = False
+        self._cur = MagicMock()
+        self._cur.fetchone.return_value = (0,)
+        self._cur.fetchall.return_value = []
+
+    def cursor(self):
+        if not self._autocommit:
+            self.in_tx = True
+        return self._cur
+
+    def commit(self):
+        self.in_tx = False
+
+    @property
+    def autocommit(self):
+        return self._autocommit
+
+    @autocommit.setter
+    def autocommit(self, value):
+        if self.in_tx:
+            raise RuntimeError("set_session cannot be used inside a transaction")
+        self._autocommit = value
+
+
+def test_refresh_does_not_fail_when_no_unit_was_loaded(_mock_collaborators):
+    conn = _TxStrictConn()
+    conn.cursor()  # DimCache / _already_loaded SELECTs leave a read tx open
+
+    with patch("etl.pipeline.get_or_download_sinan", return_value=None):
+        summary = pipeline.run_pipeline(
+            ufs=[],
+            anos=[2025],
+            raw_dir=Path("data/raw"),
+            conn=conn,
+            agravos=["CHIK"],
+            sinan_only=True,
+        )
+
+    assert summary["sinan_skipped_absent"] == 1
+    assert conn.autocommit is False
+
+
+# ---------------------------------------------------------------------------
 # No agravos argument at all: zero SINAN calls, all four keys default to 0
 # ---------------------------------------------------------------------------
 
