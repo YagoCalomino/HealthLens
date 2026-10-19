@@ -297,6 +297,34 @@ def test_sinan_only_skips_sim_and_sih(_mock_collaborators):
 
 
 # ---------------------------------------------------------------------------
+# sih_only=True skips SIM but still runs SIH for every UF x ano unit
+# ---------------------------------------------------------------------------
+
+
+def test_sih_only_skips_sim_and_runs_sih(_mock_collaborators):
+    conn = _fake_conn()
+
+    with (
+        patch("etl.pipeline.get_or_download_sim") as mock_get_or_download_sim,
+        patch(
+            "etl.pipeline.get_or_download_sih", return_value=None
+        ) as mock_get_or_download_sih,
+    ):
+        summary = pipeline.run_pipeline(
+            ufs=["SP", "AC"],
+            anos=[2025],
+            raw_dir=Path("data/raw"),
+            conn=conn,
+            sih_only=True,
+        )
+
+    mock_get_or_download_sim.assert_not_called()
+    assert mock_get_or_download_sih.call_count == 2
+    assert summary["sim_skipped_absent"] == 0
+    assert summary["sih_skipped_absent"] == 2
+
+
+# ---------------------------------------------------------------------------
 # No agravos argument at all: zero SINAN calls, all four keys default to 0
 # ---------------------------------------------------------------------------
 

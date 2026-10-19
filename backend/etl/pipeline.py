@@ -97,6 +97,7 @@ def run_pipeline(
     sim_only: bool = False,
     agravos: list[str] | None = None,
     sinan_only: bool = False,
+    sih_only: bool = False,
 ) -> dict:
     """Execute the full ETL pipeline for the given UF × year combinations.
 
@@ -113,6 +114,9 @@ def run_pipeline(
                     never (agravo, UF): pysus.sinan() has no state= parameter.
         sinan_only: When True, skip SIM and SIH entirely and process only
                     SINAN agravos.
+        sih_only:   When True, skip SIM mortality download and load. Lets SIH
+                    run with a different year range than SIM (e.g. SIH 2025
+                    is published before SIM 2025).
 
     Returns:
         Summary dict with keys: sim_files, sih_files, sim_rows, sih_rows,
@@ -198,7 +202,9 @@ def run_pipeline(
         if sinan_only:
             logger.info("--sinan-only flag set: skipping SIM and SIH downloads")
         else:
-            sim_units = [(uf, ano) for uf in ufs for ano in anos]
+            if sih_only:
+                logger.info("--sih-only flag set: skipping SIM downloads")
+            sim_units = [] if sih_only else [(uf, ano) for uf in ufs for ano in anos]
             total_sim_units = len(sim_units)
             for idx, (uf, ano) in enumerate(sim_units, start=1):
                 # --- SIM ---
@@ -228,7 +234,8 @@ def run_pipeline(
                         sim_files += 1
                         logger.info("SIM %s %s: %d rows upserted", uf, ano, n)
 
-            logger.info("--- SIM processing complete ---")
+            if not sih_only:
+                logger.info("--- SIM processing complete ---")
 
             if sim_only:
                 logger.info("--sim-only flag set: skipping SIH downloads")
@@ -575,6 +582,12 @@ if __name__ == "__main__":
         help="Process SIM mortality data only; skip SIH hospitalisation downloads.",
     )
     parser.add_argument(
+        "--sih-only",
+        action="store_true",
+        default=False,
+        help="Process SIH hospitalisation data only; skip SIM mortality downloads.",
+    )
+    parser.add_argument(
         "--agravo",
         default="",
         help=(
@@ -590,6 +603,8 @@ if __name__ == "__main__":
         help="Process SINAN agravos only; skip SIM and SIH entirely.",
     )
     args = parser.parse_args()
+    if args.sim_only and args.sih_only:
+        parser.error("--sim-only and --sih-only are mutually exclusive")
 
     ufs = [u.strip().upper() for u in args.uf.split(",") if u.strip()]
     anos = [int(y.strip()) for y in args.ano.split(",") if y.strip()]
@@ -618,6 +633,7 @@ if __name__ == "__main__":
             sim_only=args.sim_only,
             agravos=agravos,
             sinan_only=args.sinan_only,
+            sih_only=args.sih_only,
         )
     finally:
         conn.close()
