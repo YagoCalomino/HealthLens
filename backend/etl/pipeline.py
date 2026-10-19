@@ -304,9 +304,14 @@ def run_pipeline(
                     else:
                         raw_sinan_df = pd.read_parquet(sinan_path)
                         n = 0
+                        ordinal_offsets: dict[str, int] = {}
                         for start in range(0, len(raw_sinan_df), SINAN_CHUNK_SIZE):
                             chunk = raw_sinan_df.iloc[start : start + SINAN_CHUNK_SIZE]
-                            staged_sinan = stage_sinan(chunk, tipo_agravo=agravo)
+                            staged_sinan = stage_sinan(
+                                chunk,
+                                tipo_agravo=agravo,
+                                ordinal_offsets=ordinal_offsets,
+                            )
                             n += load_notificacoes(staged_sinan, cache, conn)
                         _write_audit(
                             conn, str(sinan_path), sinan_md5, None, ano, "SINAN"

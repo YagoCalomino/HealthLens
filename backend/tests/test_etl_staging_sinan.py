@@ -236,6 +236,28 @@ def test_stage_sinan_numero_notificacao_deterministic_on_rerun():
     ).all()
 
 
+def test_stage_sinan_chunked_keys_do_not_collide_across_chunks():
+    # Public SINAN files carry no NU_NOTIFIC, so every row falls back to
+    # ano+mes+municipio and only the ordinal tells same-month, same-municipio
+    # notifications apart. Chunks staged independently each restart the
+    # ordinal at 0, and the upsert silently overwrote ~32% of DENG 2025.
+    df = pd.concat([_make_deng_frame()] * 5, ignore_index=True).drop(
+        columns=["NU_NOTIFIC"]
+    )
+    whole = stage_sinan(df, "DENG")["numero_notificacao"].tolist()
+
+    offsets: dict[str, int] = {}
+    chunked = []
+    for start in range(0, len(df), 3):
+        staged = stage_sinan(
+            df.iloc[start : start + 3], "DENG", ordinal_offsets=offsets
+        )
+        chunked.extend(staged["numero_notificacao"])
+
+    assert len(set(chunked)) == len(df)
+    assert chunked == whole
+
+
 def test_stage_sinan_numero_notificacao_falls_back_when_nu_notific_absent():
     df = _make_deng_frame().drop(columns=["NU_NOTIFIC"])
     staged = stage_sinan(df, "DENG")

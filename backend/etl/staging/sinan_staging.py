@@ -174,7 +174,10 @@ def _parse_dt_notific(series: pd.Series) -> pd.Series:
 
 
 def _build_numero_notificacao(
-    result: pd.DataFrame, staged: pd.DataFrame, tipo_agravo: str
+    result: pd.DataFrame,
+    staged: pd.DataFrame,
+    tipo_agravo: str,
+    ordinal_offsets: dict[str, int] | None = None,
 ) -> pd.Series:
     """Build a deterministic, within-file-unique notification key.
 
@@ -194,7 +197,12 @@ def _build_numero_notificacao(
       unique case.
 
     This guarantees uniqueness within one source file and byte-identical
-    keys on re-load of the same cached Parquet. A genuine duplicate across
+    keys on re-load of the same cached Parquet. When a file is staged in
+    chunks, the caller passes one ordinal_offsets dict for the whole file:
+    without it the ordinal restarts at 0 in every chunk and keys collide
+    across chunks (the upsert then silently overwrote ~32% of DENG 2025).
+    The dict is updated in place with each key_base's running count, so
+    chunked keys are identical to whole-file keys. A genuine duplicate across
     a PRELIM file and its later FINAL file of the same year is a known,
     accepted limitation covered by the known_partial allowlist mechanism in
     scripts/assert_sinan_completeness.py — not silently ignored.
@@ -222,10 +230,19 @@ def _build_numero_notificacao(
     key_base = key_base.apply(_shorten)
     ordinal = key_base.groupby(key_base).cumcount()
 
+    if ordinal_offsets is not None:
+        ordinal = ordinal + key_base.map(ordinal_offsets).fillna(0).astype(int)
+        for k, n in key_base.value_counts().items():
+            ordinal_offsets[k] = ordinal_offsets.get(k, 0) + int(n)
+
     return key_base + "-" + ordinal.astype(str)
 
 
-def stage_sinan(df: pd.DataFrame, tipo_agravo: str) -> pd.DataFrame:
+def stage_sinan(
+    df: pd.DataFrame,
+    tipo_agravo: str,
+    ordinal_offsets: dict[str, int] | None = None,
+) -> pd.DataFrame:
     """Normalize a raw SINAN DataFrame to the staging schema.
 
     Branches its column selection by tipo_agravo (DENG/CHIK vs ANIM) since
@@ -233,6 +250,9 @@ def stage_sinan(df: pd.DataFrame, tipo_agravo: str) -> pd.DataFrame:
     export — see the per-agravo branch below.
 
     Output columns, in order: see STAGED_COLUMNS.
+
+    ordinal_offsets: pass the same dict for every chunk of one source file
+    (see _build_numero_notificacao); omit when staging a whole file at once.
     """
     tipo_agravo = tipo_agravo.strip().upper()
     original_count = len(df)
@@ -364,7 +384,7 @@ def stage_sinan(df: pd.DataFrame, tipo_agravo: str) -> pd.DataFrame:
         )
 
     staged["numero_notificacao"] = _build_numero_notificacao(
-        result, staged, tipo_agravo
+        result, staged, tipo_agravo, ordinal_offsets
     )
 
     return staged[STAGED_COLUMNS]
