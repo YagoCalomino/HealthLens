@@ -63,8 +63,8 @@ known_partial:
 # their real full ingestion run, once a genuinely absent (AGRAVO, ano)
 # combo is confirmed (not merely a preliminary/partial file, which belongs
 # under known_partial above).
-known_absent:
-  - [DENG, 2021]  # confirmed absent from DataSUS catalog — pipeline run 2026-10-02: 0 files found
-  - [DENG, 2022]  # confirmed absent from DataSUS catalog — pipeline run 2026-10-02: 0 files found
-  - [CHIK, 2017]  # confirmed absent from DataSUS catalog — pipeline re-run 2026-10-02: 0 files found; n=12 rows in DB are prior-ingest spillover
-  - [CHIK, 2019]  # confirmed absent from DataSUS catalog — pipeline re-run 2026-10-02: 0 files found; n=178 rows in DB are prior-ingest spillover
+# DENG 2021/2022 and CHIK 2017/2019 were listed here after the 2026-10-02
+# run reported 0 files; that was the pysus ftp/dadosgov path collision
+# (fixed in etl/ingestor.py::_fetch_sinan). All four downloaded from the
+# catalog on 2026-10-19 (540,049 / 1,405,095 / 244,070 / 178,349 rows).
+known_absent: []
