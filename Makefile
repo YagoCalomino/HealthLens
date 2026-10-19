@@ -1,10 +1,13 @@
 .PHONY: up down sample full sample-db test lint seed seed-cid10 migrate validate-env clean ml reset-sih scan-sih assert-sih spike-pysus spike-pysus-sinan backfill-raca-cor verify-raca-cor assert-sim ingest-sinan assert-sinan cluster-snapshots cluster-snapshots-uf retrain-forecasts assert-ml-snapshots backfill-dt-notific verify-dt-notific
 
-# Overridable full-run scope (27 UFs x 2010-2024 = 405 UF-year units).
+# Overridable full-run scope. SIM and SIH run as separate pipeline passes
+# (--sim-only / --sih-only) so each source has its own year range: SIH 2025
+# is published, SIM 2025 is not yet final. SIH_UFS applies to both passes.
 # Override on the command line for scoped rehearsals, e.g.:
-#   make full SIH_UFS=AC,SE SIH_ANOS=2023
+#   make full SIH_UFS=AC,SE SIM_ANOS=2023 SIH_ANOS=2023
 SIH_UFS = AC,AL,AM,AP,BA,CE,DF,ES,GO,MA,MG,MS,MT,PA,PB,PE,PI,PR,RJ,RN,RO,RR,RS,SC,SE,SP,TO
-SIH_ANOS = 2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024
+SIM_ANOS = 2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024
+SIH_ANOS = 2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025
 
 # Overridable full-run scope (3 agravos x 2015-2024 = 30 national download
 # units). The grid is 3 agravos x 10 years -- NOT 3 x 27 UFs: pysus.sinan()
@@ -55,19 +58,21 @@ seed-cid10: validate-env
 	python scripts/seed_cid10_from_dbf.py
 
 # Full pipeline: download DataSUS + ETL + materialized view refresh + ML runners
-# Iterates SIH_UFS x SIH_ANOS (default: 27 UFs x 2010-2024 = 405 units). Resumable:
+# Iterates SIH_UFS x SIM_ANOS for SIM (default: 27 UFs x 2010-2024) and
+# SIH_UFS x SIH_ANOS for SIH (default: 27 UFs x 2010-2025). Resumable:
 # interrupt and re-run -- already-audited (UF, ano) units are skipped via
 # audit_ingestao.hash_md5 dedup, so a partial run never re-downloads or re-loads
 # completed units. See docs/sih-reingestion-runbook.md for the full operator procedure.
 # Also runs the SINAN pass (SINAN_AGRAVOS x SINAN_ANOS, default: 3 agravos x
 # 2015-2024 = 30 units) via the ingest-sinan sub-make target. SINAN's year
-# range is independent of SIH_ANOS -- it is not coupled to the SIH pass above,
+# range is independent of SIM_ANOS/SIH_ANOS -- it is not coupled to the passes above,
 # since python -m etl.pipeline takes a single --ano list per invocation and
 # the two sources have different, independently-overridable year ranges. See
 # docs/sinan-ingestion-runbook.md for the full operator procedure.
 full: validate-env up seed
 	$(MAKE) seed-cid10
-	cd backend && python -m etl.pipeline --uf $(SIH_UFS) --ano $(SIH_ANOS)
+	cd backend && python -m etl.pipeline --uf $(SIH_UFS) --ano $(SIM_ANOS) --sim-only
+	cd backend && python -m etl.pipeline --uf $(SIH_UFS) --ano $(SIH_ANOS) --sih-only
 	$(MAKE) ingest-sinan
 	$(MAKE) ml
 
