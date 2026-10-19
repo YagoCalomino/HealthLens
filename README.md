@@ -68,6 +68,10 @@ to the SP group and is always null on genuine AIH rows. Filtering on it
 silently drops every real admission. The correct discriminator is `IDENT=1`,
 applied at staging.
 
+A different problem showed up while loading SINAN 2025: the row counts were about 32% lower than expected. The SINAN ingestor processes files in 200k-row batches and generates an ordinal key per row to guarantee uniqueness during upsert. That counter was resetting to zero at the start of each batch, so batch two's rows were silently overwriting batch one's. One `cumcount()` call on the full frame instead of per-batch fixed it; dengue 2025 went from about 1.1 million to 1.6 million rows after the fix.
+
+Finding that bug led to auditing the known-absent allowlist, which flags agravo/year pairs believed missing from the source so the pipeline skips retrying them. Four entries were wrong: DENG 2021, DENG 2022, CHIK 2017 and CHIK 2019 had been marked absent because of a `pysus` path collision. When a file is available on both the FTP and dadosgov origins, both downloads target the same local path and the second overwrites the first before it's been read. The four files appeared missing because they'd been corrupted mid-download. With the fix applied, all four recovered cleanly and added about 2.4 million notifications that were missing from the database.
+
 ## Architecture
 
 ```mermaid
@@ -123,6 +127,8 @@ reads from the fact tables, writes forecasts and cluster assignments back, and
 FastAPI serves everything through a cursor-paginated read-only API. The React
 dashboard consumes that API to drive the choropleth drill-down and time-series
 views.
+
+Current data coverage: SIM 2010–2024, SIH 2010–2025, SINAN 2015–2025.
 
 ## Quick start
 
