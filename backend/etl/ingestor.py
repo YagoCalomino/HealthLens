@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
-from pysus import sim, sinan
+from pysus import sim
 from pysus.api.client import PySUS
 
 logger = logging.getLogger(__name__)
@@ -103,8 +103,8 @@ def get_or_download_sinan(
        at its default (True), pysus appends the IBGE check digit and every
        downstream FK resolution against dim_local silently fails (skipped,
        not errored).
-    3. as_dataframe=True is mandatory under pysus 2.7.0 — the default
-       return type is list[str] (Parquet file paths), not a DataFrame.
+    3. The catalog can list the same file from two sources (ftp and
+       dadosgov) — see _fetch_sinan for why only one copy is downloaded.
     """
     disease = disease.strip().upper()
     parquet_path = raw_dir / f"SINAN_{disease}_{ano}.parquet"
@@ -115,13 +115,7 @@ def get_or_download_sinan(
 
     logger.info("Downloading SINAN %s %s from DataSUS FTP", disease, ano)
     try:
-        df = sinan(
-            disease=disease,
-            year=ano,
-            as_dataframe=True,
-            show_progress=False,
-            add_dv=False,
-        )
+        df = _fetch_sinan(disease, ano)
     except Exception as exc:
         logger.warning(
             "SINAN %s %s: download failed (%s) — skipping", disease, ano, exc
@@ -151,6 +145,36 @@ def get_or_download_sinan(
     logger.info("SINAN %s %s: %d rows saved to %s", disease, ano, len(df), parquet_path)
 
     return parquet_path, compute_md5(parquet_path)
+
+
+def _fetch_sinan(disease: str, ano: int) -> "pd.DataFrame | None":
+    """Fetch one national SINAN file for (disease, ano) from the pysus catalog.
+
+    WHY not sinan(..., as_dataframe=True): from 2024 on the DuckLake catalog
+    lists each SINAN file twice (ftp and dadosgov sources, e.g.
+    data/ftp/sinan/CHIK/2025/.../CHIKBR25.parquet and its dadosgov twin).
+    Both download to the same local path (~/pysus/downloads/ducklake/sinan/
+    CHIKBR25.parquet), so the second download overwrites the first while it
+    is being read and pyarrow fails with "TProtocolException: Invalid data".
+    Each copy is valid on its own, so exactly one is downloaded, preferring
+    the ftp source (the DataSUS FTP the rest of the project uses).
+
+    add_dv=False keeps ID_MN_RESI/ID_MUNICIP as raw 6-digit DataSUS codes
+    matching dim_local.codigo_ibge_6.
+    """
+    prefix = f"{disease}BR"
+
+    async def _fetch():
+        async with PySUS() as client:
+            files = await client.query(dataset="sinan", year=ano)
+            matches = [f for f in files if f.path.name.upper().startswith(prefix)]
+            if not matches:
+                return None
+            chosen = next((f for f in matches if "ftp" in f.path.parts), matches[0])
+            local_path = (await client.download(chosen)).path
+            return client.read_parquet([local_path], add_dv=False).df()
+
+    return asyncio.run(_fetch())
 
 
 def _fetch_sih_rd(uf: str, ano: int, meses: list[int]) -> "pd.DataFrame | None":
