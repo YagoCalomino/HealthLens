@@ -12,7 +12,7 @@ const CARDS = [
       { value: '576.921', label: 'Óbitos registrados' },
       { value: '904.303', label: 'Internações' },
     ],
-    tags: ['SIM · DataSUS', 'SIH · DataSUS', 'CID-10', '2010–2023'],
+    tags: ['SIM · DataSUS', 'SIH · DataSUS', 'CID-10', '2014–2023'],
     footer: '27 estados · 5.570 municípios',
     sparkline: '0,52 16,48 32,50 48,40 64,42 80,28 96,32 112,18 128,22 144,10 160,14',
   },
@@ -121,7 +121,7 @@ export default function Hub(): React.ReactElement {
             Análise de saúde pública brasileira
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: 560, margin: 0 }}>
-            Mortalidade, internações e vigilância epidemiológica a partir de dados oficiais do DataSUS, de 2010 a 2025.
+            Mortalidade, internações e vigilância epidemiológica a partir de dados oficiais do DataSUS, de 2015 a 2023.
           </p>
         </div>
 
