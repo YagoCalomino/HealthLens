@@ -7,7 +7,7 @@ export interface LoadingStateProps {
   hint?: string;
 }
 
-export const COLD_START_HINT = 'First load may take ~20 s — free-tier backend waking up.';
+export const COLD_START_HINT = 'Primeiro carregamento pode levar ~20s — backend gratuito inicializando.';
 
 export function LoadingState({ variant, label = 'Carregando dados...', hint }: LoadingStateProps): React.ReactElement {
   return (

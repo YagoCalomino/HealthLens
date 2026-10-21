@@ -26,7 +26,7 @@ const CARDS = [
       { value: '13M', label: 'Notificações SINAN' },
       { value: '3', label: 'Agravos monitorados' },
     ],
-    tags: ['SINAN', 'Dengue · Chik · Anim', '2015–2025'],
+    tags: ['SINAN', 'Dengue · Chik · Anim', '2014–2024'],
     footer: '3 agravos · 27 UFs',
     sparkline: '0,48 12,36 24,44 36,16 48,30 60,6 72,26 84,40 96,26 108,44 120,34 132,50 144,40 160,44',
   },
@@ -121,7 +121,7 @@ export default function Hub(): React.ReactElement {
             Análise de saúde pública brasileira
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: 560, margin: 0 }}>
-            Mortalidade, internações e vigilância epidemiológica a partir de dados oficiais do DataSUS, de 2015 a 2023.
+            Mortalidade, internações e vigilância epidemiológica a partir de dados oficiais do DataSUS, de 2014 a 2024.
           </p>
         </div>
 
