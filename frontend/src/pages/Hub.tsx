@@ -12,7 +12,7 @@ const CARDS = [
       { value: '576.921', label: 'Óbitos registrados' },
       { value: '904.303', label: 'Internações' },
     ],
-    tags: ['SIM · DataSUS', 'SIH · DataSUS', 'CID-10', '2010–2025'],
+    tags: ['SIM · DataSUS', 'SIH · DataSUS', 'CID-10', '2010–2023'],
     footer: '27 estados · 5.570 municípios',
     sparkline: '0,52 16,48 32,50 48,40 64,42 80,28 96,32 112,18 128,22 144,10 160,14',
   },
