@@ -5,7 +5,7 @@ import { feature } from 'topojson-client';
 import type { Topology } from 'topojson-specification';
 import type { FeatureCollection, Geometry } from 'geojson';
 import { Legend } from '../../components/Legend';
-import { LoadingState } from '../../components/LoadingState';
+import { LoadingState, COLD_START_HINT } from '../../components/LoadingState';
 import { getQuantileScale, CHORO_5 } from '../../lib/choropleth';
 import { Breadcrumb } from '../map/Breadcrumb';
 import { ChoroplethLayer, type ChoroplethRow } from '../map/ChoroplethLayer';
@@ -231,7 +231,7 @@ export function NotificationChoropleth(): React.ReactElement {
   );
 
   if (isLoading) {
-    return <LoadingState variant="skeleton-map" label="Carregando mapa de notificações..." />;
+    return <LoadingState variant="skeleton-map" label="Carregando mapa de notificações..." hint={COLD_START_HINT} />;
   }
 
   if (isError) return <FetchError />;

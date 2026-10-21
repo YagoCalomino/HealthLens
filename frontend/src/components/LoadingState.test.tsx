@@ -39,6 +39,11 @@ describe('LoadingState', () => {
     expect(rows.length).toBe(5);
   });
 
+  it('renders visible hint when provided', () => {
+    render(<LoadingState variant="skeleton-map" hint="Waking up..." />);
+    expect(screen.getByText('Waking up...')).toBeTruthy();
+  });
+
   it('renders spinner variant with SVG', () => {
     const { container } = render(<LoadingState variant="spinner" />);
     const svg = container.querySelector('svg');

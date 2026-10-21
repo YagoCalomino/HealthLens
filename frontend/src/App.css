@@ -152,6 +152,13 @@ html, body, #root {
   min-width: 0;
 }
 
+.demo-dataset-note {
+  flex: none;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
 .dashboard-mid-row {
   flex: 1;
   min-height: 0;

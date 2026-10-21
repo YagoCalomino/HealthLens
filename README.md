@@ -7,6 +7,19 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 [![CI](https://github.com/YagoCalomino/HealthLens/actions/workflows/ci.yml/badge.svg)](https://github.com/YagoCalomino/HealthLens/actions/workflows/ci.yml)
 
+**[Live demo](https://health-lens-virid.vercel.app)** (first load ~20s) · [Architecture](#architecture) · [Data quality](#data-quality)
+
+| | |
+|---|---|
+| Sources | SIM (mortality) 2010–2024, SIH (admissions) 2010–2025, SINAN (notifiable diseases) 2015–2025 |
+| Volume | 13M+ SINAN notifications |
+| Model | PostgreSQL 16 star schema: 3 fact tables, 5 dimensions, materialized views |
+| Pipeline | Idempotent Python ETL (`.dbc` → staging → marts), Alembic migrations |
+| Quality | CI: pytest (≥70% coverage), Alembic drift check, query-time budgets, completeness allowlist |
+| Serving | Read-only FastAPI (cursor pagination), React + Vite choropleth |
+
+> ⚠️ **Demo database:** partial dataset (free-tier storage limit of ~500 MB). Full load covers all states and years; runs locally or on a paid tier.
+
 I built HealthLens to turn Brazil's raw DataSUS public-health microdata into
 something an analyst or health manager can actually act on: per-100k rates,
 short-horizon forecasts with confidence intervals, and municipality clusters
@@ -60,17 +73,6 @@ Every environment-specific value (`DATABASE_URL`, `CORS_ORIGINS`,
 `VITE_API_BASE_URL`) lives in an environment variable. Zero hardcoded
 `localhost`. That was a day-one constraint because it's the difference between
 "runs on my machine" and "deployable without a rewrite."
-
-One more thing I learned the hard way: `pysus` 2.2.0 (the version I started with; the project now pins 2.7.0) concatenates the SIH-RD
-(AIH/admission) and SIH-SP (procedure) record groups into a single DataFrame.
-`SP_TIPO` looks like the obvious incident-admission flag, but it belongs only
-to the SP group and is always null on genuine AIH rows. Filtering on it
-silently drops every real admission. The correct discriminator is `IDENT=1`,
-applied at staging.
-
-A different problem showed up while loading SINAN 2025: the row counts were about 32% lower than expected. The SINAN ingestor processes files in 200k-row batches and generates an ordinal key per row to guarantee uniqueness during upsert. That counter was resetting to zero at the start of each batch, so batch two's rows were silently overwriting batch one's. Carrying each key's running count across batches (equivalent to a single `cumcount()` over the full frame) fixed it; dengue 2025 went from about 1.1 million to 1.6 million rows after the fix.
-
-Finding that bug led to auditing the known-absent allowlist, which flags agravo/year pairs believed missing from the source so the completeness check stops flagging them as missing. Four entries were wrong: DENG 2021, DENG 2022, CHIK 2017 and CHIK 2019 had been marked absent because of a `pysus` path collision. When a file is available on both the FTP and dadosgov origins, both downloads target the same local path and the second overwrites the first before it's been read. The four files appeared missing because they'd been corrupted mid-download. With the fix applied, all four recovered cleanly and added over 2.3 million notifications that were missing from the database.
 
 ## Architecture
 
@@ -129,6 +131,43 @@ dashboard consumes that API to drive the choropleth drill-down and time-series
 views.
 
 Current data coverage: SIM 2010–2024, SIH 2010–2025, SINAN 2015–2025.
+
+## Data quality
+
+Most of the work in this project went into making the loaded numbers match the
+official totals. The checks live in one of three places: staging (rules that
+make the source trustworthy), the database (constraints) and CI.
+
+**SIM revision cycles.** SIM republishes death records across revision cycles,
+so the same death certificate can arrive more than once. The `fato_obitos`
+upsert key is `(numero_do, revisao_numero)`, backed by a unique index, so
+reloading a revised file updates rows instead of duplicating them.
+
+**SIH `IDENT=1`.** `pysus` 2.2.0 (the version I started with; the project now pins 2.7.0) concatenates the SIH-RD
+(AIH/admission) and SIH-SP (procedure) record groups into a single DataFrame.
+`SP_TIPO` looks like the obvious incident-admission flag, but it belongs only
+to the SP group and is always null on genuine AIH rows. Filtering on it
+silently drops every real admission. The correct discriminator is `IDENT=1`,
+applied at staging.
+
+**Completeness allowlist.** `scripts/assert_sim_completeness.py`,
+`assert_sih_completeness.py` and `assert_sinan_completeness.py` check that every
+expected state/year (or agravo/year) has data. Pairs that are genuinely missing
+or partial in the source are listed in `scripts/*_allowlist.yaml` as
+`known_absent` / `known_partial`, so the check only fails on unexplained gaps.
+
+The SINAN load surfaced two bugs. While loading SINAN 2025, the row counts were about 32% lower than expected. The SINAN ingestor processes files in 200k-row batches and generates an ordinal key per row to guarantee uniqueness during upsert. That counter was resetting to zero at the start of each batch, so batch two's rows were silently overwriting batch one's. Carrying each key's running count across batches (equivalent to a single `cumcount()` over the full frame) fixed it; dengue 2025 went from about 1.1 million to 1.6 million rows after the fix.
+
+Finding that bug led to auditing the known-absent allowlist, which flags agravo/year pairs believed missing from the source so the completeness check stops flagging them as missing. Four entries were wrong: DENG 2021, DENG 2022, CHIK 2017 and CHIK 2019 had been marked absent because of a `pysus` path collision. When a file is available on both the FTP and dadosgov origins, both downloads target the same local path and the second overwrites the first before it's been read. The four files appeared missing because they'd been corrupted mid-download. With the fix applied, all four recovered cleanly and added over 2.3 million notifications that were missing from the database.
+
+**Query-time budgets.** `scripts/check_query_budgets.py` runs
+`EXPLAIN (ANALYZE)` on the five queries the dashboard issues against a seeded
+PostgreSQL instance and fails CI if any exceeds 200 ms (the `/indicadores` p50
+target).
+
+**Alembic drift check.** CI runs `alembic check`, which fails if the SQLAlchemy
+models and the migration history have diverged (a schema change without a
+migration).
 
 ## Quick start
 
@@ -196,14 +235,11 @@ next milestone.
 
 ## How I built this
 
-Claude Code wrote a large share of the implementation under my direction.
-The decisions that shaped the project were mine: data modeling, the DataSUS
-domain quirks (`IDENT=1` filtering in SIH, SIM revision cycles, the population
-fan-out bug fixed in migration 0015), and the validation of every result
-against the real numbers. The notebooks reflect honest analysis, including
-a forecasting model that underperforms the naive baseline, explained, and a
-clustering silhouette of 0.15 reported as-is.
+I used Claude Code as a pair programmer for a large share of the implementation.
+The engineering decisions were mine: the dimensional model, the DataSUS domain rules (SIH `IDENT=1`, SIM revision cycles, the population fan-out fixed in migration 0015), the data-quality checks, and validating every number against official totals. Every bug described above was found by me, by comparing loaded counts against the source.
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+> Developed in a private repository and published here with a clean history. Development continues in this repo.

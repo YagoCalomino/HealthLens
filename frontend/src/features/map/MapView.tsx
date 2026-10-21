@@ -7,7 +7,7 @@ import { ComposableMap, ZoomableGroup } from 'react-simple-maps';
 import { useFilterStore } from '../../store/filterStore';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { Legend } from '../../components/Legend';
-import { LoadingState } from '../../components/LoadingState';
+import { LoadingState, COLD_START_HINT } from '../../components/LoadingState';
 import { MapTooltip } from '../../components/Tooltip';
 import { getQuantileScale, CHORO_5 } from '../../lib/choropleth';
 import { Breadcrumb } from './Breadcrumb';
@@ -314,7 +314,7 @@ export function MapView(): React.ReactElement {
         >
           {/* Loading skeleton during data fetch */}
           {dataLoading && (
-            <LoadingState variant="skeleton-map" label="Carregando dados do mapa..." />
+            <LoadingState variant="skeleton-map" label="Carregando dados do mapa..." hint={COLD_START_HINT} />
           )}
 
           {/* Error state for data fetch failure */}

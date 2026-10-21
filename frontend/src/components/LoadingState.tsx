@@ -3,12 +3,28 @@
 export interface LoadingStateProps {
   variant: 'skeleton-map' | 'skeleton-chart' | 'skeleton-table' | 'spinner';
   label?: string;
+  /** Visible note shown above the placeholder, e.g. the cold-start warning. */
+  hint?: string;
 }
 
-export function LoadingState({ variant, label = 'Carregando dados...' }: LoadingStateProps): React.ReactElement {
+export const COLD_START_HINT = 'First load may take ~20 s — free-tier backend waking up.';
+
+export function LoadingState({ variant, label = 'Carregando dados...', hint }: LoadingStateProps): React.ReactElement {
   return (
     <div role="status" aria-live="polite">
       <span className="sr-only">{label}</span>
+      {hint && (
+        <p
+          style={{
+            margin: '0 0 var(--space-2)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+          }}
+        >
+          {hint}
+        </p>
+      )}
       {variant === 'skeleton-map' && <SkeletonMap />}
       {variant === 'skeleton-chart' && <SkeletonChart />}
       {variant === 'skeleton-table' && <SkeletonTable />}

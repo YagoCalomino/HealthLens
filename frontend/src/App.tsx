@@ -246,6 +246,9 @@ function DashboardContent({ onRegisterExport }: DashboardContentProps): React.Re
           coberturaTotal={coberturaTotal}
         />
       </div>
+      <p className="demo-dataset-note">
+        <span aria-hidden="true">ⓘ</span> Demo uses a partial dataset due to free-tier storage limits. Full pipeline runs locally.
+      </p>
 
       {showTable ? (
         <>
