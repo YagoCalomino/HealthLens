@@ -66,7 +66,10 @@ export function KpiStrip({
   const prophet = forecasts?.modelos?.['Prophet'];
   const previsoes = prophet?.previsoes ?? [];
 
-  const lastForecastVal = previsoes.length > 0 ? previsoes[previsoes.length - 1]!.valor_previsto : null;
+  // Card shows the next forecast year after ano_referencia (e.g. 2025), not the horizon's
+  // last year. Label and value must come from the same entry.
+  const anoReferencia = forecasts?.ano_referencia ?? -Infinity;
+  const nextForecast = previsoes.find((p) => p.ano > anoReferencia) ?? previsoes[0] ?? null;
 
   let forecastDelta: string | undefined;
   let forecastDeltaColor: string | undefined;
@@ -104,7 +107,7 @@ export function KpiStrip({
 
   // Resolve KPI #4 display based on selection context
   const isForecastCard = !isNational;
-  const nextYear = previsoes.length > 0 ? previsoes[0]!.ano : null;
+  const nextYear = nextForecast?.ano ?? null;
   const kpi4Label = municipio
     ? `Previsão · próx. ano${nextYear ? ` · ${nextYear}` : ''}`
     : uf
@@ -113,8 +116,8 @@ export function KpiStrip({
 
   const kpi4Value = isNational
     ? (variationValue ?? '—')
-    : lastForecastVal != null
-    ? Math.round(lastForecastVal).toLocaleString('pt-BR')
+    : nextForecast != null
+    ? Math.round(nextForecast.valor_previsto).toLocaleString('pt-BR')
     : '—';
 
   const kpi4Delta = isNational ? variationDelta : forecastDelta;
