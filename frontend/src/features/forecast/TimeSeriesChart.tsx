@@ -180,7 +180,8 @@ export function TimeSeriesChart(): React.ReactElement {
               <YAxis
                 tickFormatter={(v) => (v as number).toLocaleString('pt-BR')}
                 tick={{ fontFamily: 'var(--font-mono)', fontSize: 10 }}
-                unit=" / 100k"
+                unit="/100k"
+                width={72}
               />
               <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<ChartTooltip />} />
             </ComposedChart>
@@ -276,7 +277,8 @@ export function TimeSeriesChart(): React.ReactElement {
           <YAxis
             tickFormatter={(v) => (v as number).toLocaleString('pt-BR')}
             tick={{ fontFamily: 'var(--font-mono)', fontSize: 10 }}
-            unit=" / 100k"
+            unit="/100k"
+            width={72}
           />
           {/* Tooltip BEFORE Legend — required by Recharts v3 z-index (DOM render order) */}
           <Tooltip
