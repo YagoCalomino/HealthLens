@@ -235,7 +235,6 @@ next milestone.
 
 ## How I built this
 
-I used Claude Code as a pair programmer for a large share of the implementation.
 The engineering decisions were mine: the dimensional model, the DataSUS domain rules (SIH `IDENT=1`, SIM revision cycles, the population fan-out fixed in migration 0015), the data-quality checks, and validating every number against official totals. Every bug described above was found by me, by comparing loaded counts against the source.
 
 ## License
