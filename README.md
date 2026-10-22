@@ -11,7 +11,7 @@
 
 | | |
 |---|---|
-| Sources | SIM (mortality) 2015–2023, SIH (admissions) 2014–2023, SINAN (notifiable diseases) 2015–2023 |
+| Sources | SIM (mortality) 2015–2023, SIH (admissions) 2015–2023, SINAN (notifiable diseases) 2015–2023 |
 | Volume | 13M+ SINAN notifications |
 | Model | PostgreSQL 16 star schema: 3 fact tables, 5 dimensions, materialized views |
 | Pipeline | Idempotent Python ETL (`.dbc` → staging → marts), Alembic migrations |
@@ -130,7 +130,7 @@ FastAPI serves everything through a cursor-paginated read-only API. The React
 dashboard consumes that API to drive the choropleth drill-down and time-series
 views.
 
-Current data coverage: SIM 2015–2023, SIH 2014–2023, SINAN 2015–2023.
+Current data coverage: SIM 2015–2023, SIH 2015–2023, SINAN 2015–2023.
 
 ## Data quality
 
