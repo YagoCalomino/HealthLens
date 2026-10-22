@@ -1,6 +1,7 @@
 import React from 'react';
 import type { IndicadorResponse, ForecastResponse } from '../types/api';
 import { filterReliableRows } from '../lib/reliability';
+import { selectLatestYearRows, sumTotalEventos } from '../lib/latestYear';
 import { KpiCard } from './KpiCard';
 
 // ---------------------------------------------------------------------------
@@ -29,22 +30,8 @@ export function KpiStrip({
   indicador,
   coberturaTotal,
 }: KpiStripProps): React.ReactElement {
-  // API returns one row per (location, year); KPI #1 and #2 must reflect only the
-  // latest year in the dataset — summing/averaging across years inflates both by
-  // roughly the number of years present.
-  // Prefer the latest year with real data — some UFs/municípios have a partial-coverage
-  // year in their most recent data that would otherwise tank these aggregates. Reliability
-  // is judged per-location against that location's own median total_eventos (see
-  // lib/reliability.ts and App.tsx trendByKey for the same guard) since absolute event
-  // counts aren't comparable across UFs of very different sizes or between SIM and SIH.
-  const reliableRows = filterReliableRows(rows, (r) => r.codigo_ibge ?? r.sigla_uf);
-  const latestYear =
-    reliableRows.length > 0
-      ? Math.max(...reliableRows.map((r) => r.ano))
-      : rows.length === 0
-      ? null
-      : Math.max(...rows.map((r) => r.ano));
-  const latestYearRows = latestYear == null ? [] : rows.filter((r) => r.ano === latestYear);
+  // KPI #1 and #2 reflect only the latest reliable year (see lib/latestYear.ts).
+  const { latestYearRows } = selectLatestYearRows(rows);
 
   // -------------------------------------------------------------------------
   // KPI #1 — Total, latest year only
@@ -52,9 +39,7 @@ export function KpiStrip({
   const totalValue =
     latestYearRows.length === 0
       ? '—'
-      : latestYearRows
-          .reduce((sum, r) => sum + (r.total_eventos ?? 0), 0)
-          .toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+      : sumTotalEventos(latestYearRows).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
   const kpi1Label = indicador === 'SIM' ? 'Total de óbitos' : 'Total de internações';
 
   // -------------------------------------------------------------------------

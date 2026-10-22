@@ -1,5 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueries, type UseQueryResult } from '@tanstack/react-query';
+import { fetchIndicadoresUf, fetchNotificacoesUfSummary } from '../lib/api';
+import { selectLatestYearRows, sumTotalEventos } from '../lib/latestYear';
+import { DEFAULT_STATE } from '../store/filterStore';
+import {
+  VIGILANCIA_DEFAULT_ANO_FIM,
+  VIGILANCIA_DEFAULT_ANO_INICIO,
+} from '../store/vigilanciaFilterStore';
+import type { IndicadorResponse, NotificacaoSummaryResponse } from '../types/api';
+
+interface HubStat {
+  value: string;
+  label: string;
+}
 
 const CARDS = [
   {
@@ -8,10 +22,6 @@ const CARDS = [
     label: 'Mortalidade & Internações',
     title: 'Mortalidade & Internações',
     description: 'Óbitos e internações do SUS por local, tempo e causa, com série temporal, previsão AutoARIMA e agrupamento K-Means por estado.',
-    stats: [
-      { value: '576.921', label: 'Óbitos registrados' },
-      { value: '904.303', label: 'Internações' },
-    ],
     tags: ['SIM · DataSUS', 'SIH · DataSUS', 'CID-10', '2014–2023'],
     footer: '27 estados · 5.570 municípios',
     sparkline: '0,52 16,48 32,50 48,40 64,42 80,28 96,32 112,18 128,22 144,10 160,14',
@@ -22,17 +32,13 @@ const CARDS = [
     label: 'Vigilância',
     title: 'Vigilância Epidemiológica',
     description: 'Notificações SINAN de dengue, chikungunya e animais peçonhentos, com curva epidêmica semanal e perfil demográfico.',
-    stats: [
-      { value: '13M', label: 'Notificações SINAN' },
-      { value: '3', label: 'Agravos monitorados' },
-    ],
     tags: ['SINAN', 'Dengue · Chik · Anim', '2014–2024'],
     footer: '3 agravos · 27 UFs',
     sparkline: '0,48 12,36 24,44 36,16 48,30 60,6 72,26 84,40 96,26 108,44 120,34 132,50 144,40 160,44',
   },
 ] as const;
 
-function HubCard({ card }: { card: typeof CARDS[number] }): React.ReactElement {
+function HubCard({ card, stats }: { card: typeof CARDS[number]; stats: HubStat[] }): React.ReactElement {
   const navigate = useNavigate();
   const [hovered, setHovered] = React.useState(false);
 
@@ -83,7 +89,7 @@ function HubCard({ card }: { card: typeof CARDS[number] }): React.ReactElement {
 
       {/* Stats */}
       <div style={{ display: 'flex', gap: 36, marginBottom: 24, flexWrap: 'wrap' }}>
-        {card.stats.map((s) => (
+        {stats.map((s) => (
           <div key={s.label}>
             <div style={{ fontFamily: "'Times New Roman', Times, serif", fontSize: 30, fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1 }}>{s.value}</div>
             <div style={{ fontSize: 11, letterSpacing: '0.06em', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: 6 }}>{s.label}</div>
@@ -108,7 +114,83 @@ function HubCard({ card }: { card: typeof CARDS[number] }): React.ReactElement {
   );
 }
 
+const HUB_AGRAVOS = ['DENG', 'CHIK', 'ANIM'] as const;
+const STALE_TIME = 5 * 60 * 1000;
+
+function formatCount(n: number): string {
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
+
+// Same query keys and default filters as useIndicadores (dashboard KpiStrip) and
+// useMultiAgravoComparison (Vigilância), so the Hub numbers match what each panel
+// shows on first open and the cached responses are reused on navigation.
+function useHubStats(): { mortalidade: HubStat[]; vigilancia: HubStat[] } {
+  const indicadorQueries = useQueries({
+    queries: (['SIM', 'SIH'] as const).map((indicador) => {
+      const filters = { ...DEFAULT_STATE, indicador };
+      return {
+        queryKey: ['indicadores', filters],
+        queryFn: () => fetchIndicadoresUf(filters),
+        staleTime: STALE_TIME,
+      };
+    }),
+  });
+
+  const notificacaoQueries = useQueries({
+    queries: HUB_AGRAVOS.map((agravo) => {
+      const filters = {
+        agravo,
+        uf: '',
+        municipio: '',
+        ano_inicio: VIGILANCIA_DEFAULT_ANO_INICIO,
+        ano_fim: VIGILANCIA_DEFAULT_ANO_FIM,
+      };
+      return {
+        queryKey: ['notificacoes-uf-summary', filters],
+        queryFn: () => fetchNotificacoesUfSummary(filters),
+        staleTime: STALE_TIME,
+      };
+    }),
+  });
+
+  const latestYearStat = (
+    query: UseQueryResult<IndicadorResponse[]>,
+    noun: string,
+  ): HubStat => {
+    if (query.isLoading) return { value: '…', label: noun };
+    const { latestYear, latestYearRows } = selectLatestYearRows(query.data ?? []);
+    if (query.isError || latestYear == null) return { value: '—', label: noun };
+    return { value: formatCount(sumTotalEventos(latestYearRows)), label: `${noun} em ${latestYear}` };
+  };
+
+  const periodo = `${VIGILANCIA_DEFAULT_ANO_INICIO}–${VIGILANCIA_DEFAULT_ANO_FIM}`;
+  const notificacoesLabel = `Notificações SINAN · ${periodo}`;
+  let notificacoesValue: string;
+  if (notificacaoQueries.some((q) => q.isLoading)) {
+    notificacoesValue = '…';
+  } else if (notificacaoQueries.some((q) => q.isError)) {
+    notificacoesValue = '—';
+  } else {
+    const total = notificacaoQueries
+      .flatMap((q) => (q.data ?? []) as NotificacaoSummaryResponse[])
+      .reduce((sum, r) => sum + r.total_notificacoes, 0);
+    notificacoesValue = formatCount(total);
+  }
+
+  return {
+    mortalidade: [
+      latestYearStat(indicadorQueries[0], 'Óbitos'),
+      latestYearStat(indicadorQueries[1], 'Internações'),
+    ],
+    vigilancia: [
+      { value: notificacoesValue, label: notificacoesLabel },
+      { value: String(HUB_AGRAVOS.length), label: 'Agravos monitorados' },
+    ],
+  };
+}
+
 export default function Hub(): React.ReactElement {
+  const stats = useHubStats();
   return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: "'Times New Roman', Times, serif", color: 'var(--text-primary)', position: 'relative' }}>
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '72px 40px 96px' }}>
@@ -127,7 +209,13 @@ export default function Hub(): React.ReactElement {
 
         {/* Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'stretch' }}>
-          {CARDS.map((card) => <HubCard key={card.to} card={card} />)}
+          {CARDS.map((card) => (
+            <HubCard
+              key={card.to}
+              card={card}
+              stats={card.to === '/mortalidade' ? stats.mortalidade : stats.vigilancia}
+            />
+          ))}
         </div>
 
         {/* Footer */}

@@ -1,8 +1,46 @@
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Hub from './Hub';
+
+// SIM: latest year 2023 → 200 + 50 = 250. SIH: 2023 → 1.000 + 234 = 1.234.
+// SINAN (all three agravos, default period): 1.000 + 500 + 300 + 200 = 2.000.
+const INDICADORES: Record<string, object[]> = {
+  SIM: [
+    { sigla_uf: 'SP', codigo_ibge: null, nome_municipio: null, ano: 2022, total_eventos: 100, populacao: 1000, taxa_por_100k: 1, fonte: 'SIM' },
+    { sigla_uf: 'SP', codigo_ibge: null, nome_municipio: null, ano: 2023, total_eventos: 200, populacao: 1000, taxa_por_100k: 1, fonte: 'SIM' },
+    { sigla_uf: 'RJ', codigo_ibge: null, nome_municipio: null, ano: 2023, total_eventos: 50, populacao: 1000, taxa_por_100k: 1, fonte: 'SIM' },
+  ],
+  SIH: [
+    { sigla_uf: 'SP', codigo_ibge: null, nome_municipio: null, ano: 2023, total_eventos: 1000, populacao: 1000, taxa_por_100k: 1, fonte: 'SIH' },
+    { sigla_uf: 'RJ', codigo_ibge: null, nome_municipio: null, ano: 2023, total_eventos: 234, populacao: 1000, taxa_por_100k: 1, fonte: 'SIH' },
+  ],
+};
+
+const NOTIFICACOES: Record<string, number[]> = { DENG: [1000, 500], CHIK: [300], ANIM: [200] };
+
+function mockFetch(url: RequestInfo | URL): Promise<Response> {
+  const parsed = new URL(String(url), 'http://test');
+  let body: unknown = [];
+  if (parsed.pathname.endsWith('/indicadores/uf-summary')) {
+    body = INDICADORES[parsed.searchParams.get('fonte') ?? ''] ?? [];
+  } else if (parsed.pathname.endsWith('/notificacoes/uf-summary')) {
+    const agravo = parsed.searchParams.get('agravo') ?? '';
+    body = (NOTIFICACOES[agravo] ?? []).map((total, i) => ({
+      sigla_uf: 'SP', codigo_ibge: null, nome_municipio: null, ano: 2015 + i, agravo,
+      total_notificacoes: total, taxa_por_100k: 1,
+    }));
+  }
+  return Promise.resolve({ ok: true, json: () => Promise.resolve(body) } as Response);
+}
+
+function withQueryClient(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return <QueryClientProvider client={client}>{ui}</QueryClientProvider>;
+}
 
 function LocationProbe() {
   const location = useLocation();
@@ -11,27 +49,31 @@ function LocationProbe() {
 
 function renderHub() {
   return render(
-    <MemoryRouter>
-      <Hub />
-    </MemoryRouter>
+    withQueryClient(
+      <MemoryRouter>
+        <Hub />
+      </MemoryRouter>
+    )
   );
 }
 
 function renderHubWithRoutes() {
   return render(
-    <MemoryRouter initialEntries={['/']}>
-      <Routes>
-        <Route path="/" element={<Hub />} />
-        <Route path="/mortalidade" element={<LocationProbe />} />
-        <Route path="/vigilancia" element={<LocationProbe />} />
-      </Routes>
-    </MemoryRouter>
+    withQueryClient(
+      <MemoryRouter initialEntries={['/']}>
+        <Routes>
+          <Route path="/" element={<Hub />} />
+          <Route path="/mortalidade" element={<LocationProbe />} />
+          <Route path="/vigilancia" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>
+    )
   );
 }
 
 describe('Hub', () => {
   beforeEach(() => {
-    global.fetch = vi.fn() as unknown as typeof fetch;
+    global.fetch = vi.fn(mockFetch) as unknown as typeof fetch;
   });
 
   afterEach(() => {
@@ -103,8 +145,25 @@ describe('Hub', () => {
     expect((await screen.findByTestId('location-probe')).textContent).toBe('/vigilancia');
   });
 
-  it('issues zero network requests', () => {
+  it('shows latest-year óbitos and internações totals from /indicadores, like the dashboard KPI', async () => {
     renderHub();
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(await screen.findByText('250')).toBeTruthy();
+    expect(screen.getByText('Óbitos em 2023')).toBeTruthy();
+    expect(await screen.findByText('1.234')).toBeTruthy();
+    expect(screen.getByText('Internações em 2023')).toBeTruthy();
+  });
+
+  it('shows total SINAN notificações summed across the three agravos for the default period', async () => {
+    renderHub();
+    expect(await screen.findByText('2.000')).toBeTruthy();
+    expect(screen.getByText('Notificações SINAN · 2015–2024')).toBeTruthy();
+  });
+
+  it('shows a dash instead of a number when the API fails', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 500, statusText: 'err', json: () => Promise.resolve({}) } as Response)
+    ) as unknown as typeof fetch;
+    renderHub();
+    expect((await screen.findAllByText('—')).length).toBe(3);
   });
 });
