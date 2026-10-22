@@ -203,7 +203,7 @@ export default function Hub(): React.ReactElement {
             Análise de saúde pública brasileira
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.6, color: 'var(--text-secondary)', maxWidth: 560, margin: 0 }}>
-            Mortalidade, internações e vigilância epidemiológica a partir de dados oficiais do DataSUS, de 2014 a 2024.
+            Mortalidade, internações e vigilância epidemiológica a partir de dados oficiais do DataSUS, de 2015 a 2023.
           </p>
         </div>
 
