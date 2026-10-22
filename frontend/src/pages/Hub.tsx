@@ -32,7 +32,7 @@ const CARDS = [
     label: 'Vigilância',
     title: 'Vigilância Epidemiológica',
     description: 'Notificações SINAN de dengue, chikungunya e animais peçonhentos, com curva epidêmica semanal e perfil demográfico.',
-    tags: ['SINAN', 'Dengue · Chik · Anim', '2014–2024'],
+    tags: ['SINAN', 'Dengue · Chik · Anim', '2015–2023'],
     footer: '3 agravos · 27 UFs',
     sparkline: '0,48 12,36 24,44 36,16 48,30 60,6 72,26 84,40 96,26 108,44 120,34 132,50 144,40 160,44',
   },

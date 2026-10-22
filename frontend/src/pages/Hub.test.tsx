@@ -156,7 +156,7 @@ describe('Hub', () => {
   it('shows total SINAN notificações summed across the three agravos for the default period', async () => {
     renderHub();
     expect(await screen.findByText('2.000')).toBeTruthy();
-    expect(screen.getByText('Notificações SINAN · 2015–2024')).toBeTruthy();
+    expect(screen.getByText('Notificações SINAN · 2015–2023')).toBeTruthy();
   });
 
   it('shows a dash instead of a number when the API fails', async () => {

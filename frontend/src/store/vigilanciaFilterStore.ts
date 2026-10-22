@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
 export const VIGILANCIA_DEFAULT_ANO_INICIO = 2015;
-export const VIGILANCIA_DEFAULT_ANO_FIM = 2024;
+export const VIGILANCIA_DEFAULT_ANO_FIM = 2023;
 
 export interface VigilanciaFilterState {
   agravo: 'DENG' | 'CHIK' | 'ANIM' | ''; // '' = multi-agravo comparison view
