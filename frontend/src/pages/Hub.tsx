@@ -22,7 +22,7 @@ const CARDS = [
     label: 'Mortalidade & Internações',
     title: 'Mortalidade & Internações',
     description: 'Óbitos e internações do SUS por local, tempo e causa, com série temporal, previsão AutoARIMA e agrupamento K-Means por estado.',
-    tags: ['SIM · DataSUS', 'SIH · DataSUS', 'CID-10', '2014–2023'],
+    tags: ['SIM · DataSUS', 'SIH · DataSUS', 'CID-10', '2015–2023'],
     footer: '27 estados · 5.570 municípios',
     sparkline: '0,52 16,48 32,50 48,40 64,42 80,28 96,32 112,18 128,22 144,10 160,14',
   },
