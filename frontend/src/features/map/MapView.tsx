@@ -268,7 +268,8 @@ export function MapView(): React.ReactElement {
   const mapAriaLabel = `Mapa de ${indicadorNome} por ${nivelLabel} — Brasil ${ano_fim}`;
 
   // Dynamic map title
-  const mapTitle = uf ? `Mortalidade por município · ${uf}` : 'Mortalidade por estado · Brasil';
+  const tituloIndicador = indicador === 'SIM' ? 'Mortalidade' : 'Internações';
+  const mapTitle = uf ? `${tituloIndicador} por município · ${uf}` : `${tituloIndicador} por estado · Brasil`;
   const mapSubtitle = `Período ${ano_inicio}–${ano_fim} · por 100 mil hab.`;
 
   // -------------------------------------------------------------------------
