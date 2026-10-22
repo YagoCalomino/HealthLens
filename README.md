@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | Sources | SIM (mortality) 2015–2023, SIH (admissions) 2015–2023, SINAN (notifiable diseases) 2015–2023 |
-| Volume | 13M+ SINAN notifications |
+| Volume | 9.2M+ SINAN notifications |
 | Model | PostgreSQL 16 star schema: 3 fact tables, 5 dimensions, materialized views |
 | Pipeline | Idempotent Python ETL (`.dbc` → staging → marts), Alembic migrations |
 | Quality | CI: pytest (≥70% coverage), Alembic drift check, query-time budgets, completeness allowlist |
@@ -156,7 +156,7 @@ expected state/year (or agravo/year) has data. Pairs that are genuinely missing
 or partial in the source are listed in `scripts/*_allowlist.yaml` as
 `known_absent` / `known_partial`, so the check only fails on unexplained gaps.
 
-The SINAN load surfaced two bugs. While loading SINAN 2025, the row counts were about 32% lower than expected. The SINAN ingestor processes files in 200k-row batches and generates an ordinal key per row to guarantee uniqueness during upsert. That counter was resetting to zero at the start of each batch, so batch two's rows were silently overwriting batch one's. Carrying each key's running count across batches (equivalent to a single `cumcount()` over the full frame) fixed it; dengue 2025 went from about 1.1 million to 1.6 million rows after the fix.
+The SINAN load surfaced two bugs. While loading a full year of dengue notifications, the row counts were about 32% lower than expected. The SINAN ingestor processes files in 200k-row batches and generates an ordinal key per row to guarantee uniqueness during upsert. That counter was resetting to zero at the start of each batch, so batch two's rows were silently overwriting batch one's. Carrying each key's running count across batches (equivalent to a single `cumcount()` over the full frame) fixed it; that year's dengue load went from about 1.1 million to 1.6 million rows after the fix.
 
 Finding that bug led to auditing the known-absent allowlist, which flags agravo/year pairs believed missing from the source so the completeness check stops flagging them as missing. Four entries were wrong: DENG 2021, DENG 2022, CHIK 2017 and CHIK 2019 had been marked absent because of a `pysus` path collision. When a file is available on both the FTP and dadosgov origins, both downloads target the same local path and the second overwrites the first before it's been read. The four files appeared missing because they'd been corrupted mid-download. With the fix applied, all four recovered cleanly and added over 2.3 million notifications that were missing from the database.
 
