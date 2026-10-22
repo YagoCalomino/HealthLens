@@ -199,6 +199,21 @@ function DashboardContent({ onRegisterExport }: DashboardContentProps): React.Re
               <TimeSeriesChart />
             </ErrorBoundary>
           </div>
+          {indicador === 'SIH' && ano_inicio <= 2022 && ano_fim >= 2021 && (
+            <p
+              role="note"
+              style={{
+                flexShrink: 0,
+                margin: '4px 0 0',
+                textAlign: 'right',
+                fontFamily: 'var(--font-ui)',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--text-muted)',
+              }}
+            >
+              ⓘ 2021–2022 não disponíveis na demo
+            </p>
+          )}
         </Card>
       </div>
       <div className="dashboard-chart-card" style={{ flex: 2 }}>
