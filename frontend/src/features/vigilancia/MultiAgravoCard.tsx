@@ -41,12 +41,21 @@ function aggregateByAno(rows: NotificacaoSummaryResponse[]): AnoSeriesPoint[] {
     .sort((a, b) => a.ano - b.ano);
 }
 
-/** Summed taxa_por_100k for the latest ano present in the filtered rows. */
+/** Rate for the latest ano present in the filtered rows: Σ notificações / Σ população.
+ * Rows are one per UF, so summing their taxa_por_100k would add 27 rates together.
+ * The API returns no populacao, so each row's is recovered from its own rate
+ * (total × 100000 / taxa — the inverse of the backend formula). */
 function latestTaxa(rows: NotificacaoSummaryResponse[]): number | null {
   if (rows.length === 0) return null;
   const latestAno = Math.max(...rows.map((r) => r.ano));
-  const latestRows = rows.filter((r) => r.ano === latestAno);
-  return latestRows.reduce((sum, r) => sum + (r.taxa_por_100k ?? 0), 0);
+  let totalNotificacoes = 0;
+  let totalPopulacao = 0;
+  for (const r of rows) {
+    if (r.ano !== latestAno || r.taxa_por_100k == null || r.taxa_por_100k <= 0) continue;
+    totalNotificacoes += r.total_notificacoes;
+    totalPopulacao += (r.total_notificacoes * 100000) / r.taxa_por_100k;
+  }
+  return totalPopulacao > 0 ? (totalNotificacoes / totalPopulacao) * 100000 : null;
 }
 
 const emptyStateTextStyle: React.CSSProperties = {

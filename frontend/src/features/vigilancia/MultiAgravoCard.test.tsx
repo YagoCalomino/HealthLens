@@ -102,6 +102,26 @@ describe('MultiAgravoCard', () => {
     expect(screen.queryByText(/TypeError/)).toBeNull();
   });
 
+  it('computes the national rate as Σ notificações / Σ população, not the sum of UF rates', () => {
+    // SP: 1.000 cases / 1.000.000 people = 100/100k. AC: 300 / 100.000 = 300/100k.
+    // National: 1.300 / 1.100.000 = 118,2/100k. Summing the rates would give 400.
+    const rows = [
+      summaryRow({ sigla_uf: 'SP', total_notificacoes: 1000, taxa_por_100k: 100 }),
+      summaryRow({ sigla_uf: 'AC', total_notificacoes: 300, taxa_por_100k: 300 }),
+      summaryRow({ sigla_uf: 'AC', ano: 2022, total_notificacoes: 999, taxa_por_100k: 9999 }),
+    ];
+    mockUseMultiAgravoComparison.mockReturnValue([
+      { agravo: 'DENG', rows, isLoading: false, isError: false },
+      { agravo: 'CHIK', rows: [], isLoading: false, isError: false },
+      { agravo: 'ANIM', rows: [], isLoading: false, isError: false },
+    ]);
+
+    render(<MultiAgravoCard />, { wrapper: Wrapper });
+
+    expect(screen.getByText('118.2')).toBeTruthy();
+    expect(screen.queryByText('400.0')).toBeNull();
+  });
+
   it('clicking the Dengue slot sets the store agravo to DENG', async () => {
     mockUseMultiAgravoComparison.mockReturnValue([
       { agravo: 'DENG', rows: [summaryRow({ agravo: 'DENG' })], isLoading: false, isError: false },
