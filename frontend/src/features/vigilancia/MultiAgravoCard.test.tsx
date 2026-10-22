@@ -122,6 +122,44 @@ describe('MultiAgravoCard', () => {
     expect(screen.queryByText('400.0')).toBeNull();
   });
 
+  it('ANIM skips a latest year far below the usual national volume and labels the year used', () => {
+    // 2023 is a partial sample (9.995 cases vs ~250k): ANIM falls back to 2020.
+    const anim = [
+      summaryRow({ agravo: 'ANIM', ano: 2019, total_notificacoes: 286_900, taxa_por_100k: 140 }),
+      summaryRow({ agravo: 'ANIM', ano: 2020, total_notificacoes: 252_883, taxa_por_100k: 120 }),
+      summaryRow({ agravo: 'ANIM', ano: 2023, total_notificacoes: 9_995, taxa_por_100k: 5 }),
+    ];
+    const deng = [summaryRow({ agravo: 'DENG', ano: 2023, total_notificacoes: 50, taxa_por_100k: 7 })];
+    mockUseMultiAgravoComparison.mockReturnValue([
+      { agravo: 'DENG', rows: deng, isLoading: false, isError: false },
+      { agravo: 'CHIK', rows: [], isLoading: false, isError: false },
+      { agravo: 'ANIM', rows: anim, isLoading: false, isError: false },
+    ]);
+
+    render(<MultiAgravoCard />, { wrapper: Wrapper });
+
+    expect(screen.getByText('Animais peçonhentos · 2020')).toBeTruthy();
+    expect(screen.getByText('120.0')).toBeTruthy();
+    // DENG has no floor: its latest year is used even with few cases.
+    expect(screen.getByText('Dengue · 2023')).toBeTruthy();
+  });
+
+  it('ANIM skips a latest year under the absolute 1.000-case floor', () => {
+    const anim = [
+      summaryRow({ agravo: 'ANIM', ano: 2022, total_notificacoes: 1_200, taxa_por_100k: 10 }),
+      summaryRow({ agravo: 'ANIM', ano: 2023, total_notificacoes: 800, taxa_por_100k: 6 }),
+    ];
+    mockUseMultiAgravoComparison.mockReturnValue([
+      { agravo: 'DENG', rows: [], isLoading: false, isError: false },
+      { agravo: 'CHIK', rows: [], isLoading: false, isError: false },
+      { agravo: 'ANIM', rows: anim, isLoading: false, isError: false },
+    ]);
+
+    render(<MultiAgravoCard />, { wrapper: Wrapper });
+
+    expect(screen.getByText('Animais peçonhentos · 2022')).toBeTruthy();
+  });
+
   it('clicking the Dengue slot sets the store agravo to DENG', async () => {
     mockUseMultiAgravoComparison.mockReturnValue([
       { agravo: 'DENG', rows: [summaryRow({ agravo: 'DENG' })], isLoading: false, isError: false },

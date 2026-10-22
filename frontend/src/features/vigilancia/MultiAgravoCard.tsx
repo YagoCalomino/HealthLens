@@ -4,6 +4,7 @@ import { KpiCard } from '../../components/KpiCard';
 import { LoadingState } from '../../components/LoadingState';
 import { useVigilanciaFilterStore } from '../../store/vigilanciaFilterStore';
 import { useMultiAgravoComparison } from './useNotificacoes';
+import { median, RELIABILITY_RATIO } from '../../lib/reliability';
 import type { AgravoCodigo, NotificacaoSummaryResponse } from '../../types/api';
 
 // Portuguese slot labels, in the fixed display order.
@@ -41,17 +42,32 @@ function aggregateByAno(rows: NotificacaoSummaryResponse[]): AnoSeriesPoint[] {
     .sort((a, b) => a.ano - b.ano);
 }
 
-/** Rate for the latest ano present in the filtered rows: Σ notificações / Σ população.
+// ANIM's latest loaded year is a partial sample (2023: ~10k cases vs ~250k in a
+// normal year), so its rate would look like a collapse. A year counts only if its
+// national total clears both an absolute floor and RELIABILITY_RATIO of the median year.
+const MIN_CASOS_ANO_ANIM = 1000;
+const AGRAVOS_COM_ANO_MINIMO: ReadonlySet<AgravoCodigo> = new Set(['ANIM']);
+
+/** Latest ano in rows — for AGRAVOS_COM_ANO_MINIMO, the latest one with enough cases. */
+function selectReferenceAno(agravo: AgravoCodigo, rows: NotificacaoSummaryResponse[]): number | null {
+  if (rows.length === 0) return null;
+  const totalPorAno = new Map<number, number>();
+  for (const r of rows) totalPorAno.set(r.ano, (totalPorAno.get(r.ano) ?? 0) + r.total_notificacoes);
+  const anos = Array.from(totalPorAno.keys()).sort((a, b) => b - a);
+  if (!AGRAVOS_COM_ANO_MINIMO.has(agravo)) return anos[0];
+  const piso = Math.max(MIN_CASOS_ANO_ANIM, median(Array.from(totalPorAno.values())) * RELIABILITY_RATIO);
+  return anos.find((ano) => totalPorAno.get(ano)! >= piso) ?? anos[0];
+}
+
+/** Rate for one ano: Σ notificações / Σ população.
  * Rows are one per UF, so summing their taxa_por_100k would add 27 rates together.
  * The API returns no populacao, so each row's is recovered from its own rate
  * (total × 100000 / taxa — the inverse of the backend formula). */
-function latestTaxa(rows: NotificacaoSummaryResponse[]): number | null {
-  if (rows.length === 0) return null;
-  const latestAno = Math.max(...rows.map((r) => r.ano));
+function taxaDoAno(rows: NotificacaoSummaryResponse[], ano: number): number | null {
   let totalNotificacoes = 0;
   let totalPopulacao = 0;
   for (const r of rows) {
-    if (r.ano !== latestAno || r.taxa_por_100k == null || r.taxa_por_100k <= 0) continue;
+    if (r.ano !== ano || r.taxa_por_100k == null || r.taxa_por_100k <= 0) continue;
     totalNotificacoes += r.total_notificacoes;
     totalPopulacao += (r.total_notificacoes * 100000) / r.taxa_por_100k;
   }
@@ -132,11 +148,12 @@ function AgravoSlot({ agravo, rows, isLoading, isError }: AgravoSlotProps): Reac
     // condition, not a bug.
     body = <EmptySlot label={label} />;
   } else {
-    const taxa = latestTaxa(rows);
+    const ano = selectReferenceAno(agravo, rows);
+    const taxa = ano != null ? taxaDoAno(rows, ano) : null;
     const series = aggregateByAno(rows);
     body = (
       <>
-        <KpiCard label={label} value={taxa != null ? taxa.toFixed(1) : '—'} accentColor={color} />
+        <KpiCard label={ano != null ? `${label} · ${ano}` : label} value={taxa != null ? taxa.toFixed(1) : '—'} accentColor={color} />
         <div style={{ height: 90 }}>
           <ResponsiveContainer width="100%" height="100%" debounce={50}>
             <LineChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
@@ -184,7 +201,7 @@ export function MultiAgravoCard(): React.ReactElement {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
       <div>
         <p style={{ fontFamily: 'var(--font-ui)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-          Taxa de notificação por 100 mil habitantes no último ano com dados disponíveis. Clique em um agravo para filtrar o painel.
+          Taxa de notificação por 100 mil habitantes no último ano com dados suficientes. Clique em um agravo para filtrar o painel.
         </p>
       </div>
       <div style={rowStyle}>
