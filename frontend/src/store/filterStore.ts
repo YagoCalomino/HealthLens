@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
-export const DEFAULT_ANO_INICIO = 2010;
-export const DEFAULT_ANO_FIM = 2025;
+export const DEFAULT_ANO_INICIO = 2015;
+export const DEFAULT_ANO_FIM = 2023;
 
 export interface FilterState {
   indicador: 'SIM' | 'SIH';
@@ -144,7 +144,7 @@ export function hydrateFromUrl(): void {
 
   // Validate the full effective year range (URL values merged with defaults).
   // If the range is invalid (start ≥ end), reset BOTH to defaults — patching just
-  // one side can produce values below min (e.g. ano_inicio = 2009 < slider min 2010),
+  // one side can produce values below min (e.g. ano_inicio = 2014 < slider min 2015),
   // causing Radix Slider to clamp both thumbs to the same position (one-handle visual).
   const effectiveStart = patch.ano_inicio ?? DEFAULT_STATE.ano_inicio;
   const effectiveEnd = patch.ano_fim ?? DEFAULT_STATE.ano_fim;
