@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueries, type UseQueryResult } from '@tanstack/react-query';
 import { fetchIndicadoresUf, fetchNotificacoesUfSummary } from '../lib/api';
-import { selectLatestYearRows, sumTotalEventos } from '../lib/latestYear';
+import { sumTotalEventos } from '../lib/latestYear';
 import { DEFAULT_STATE } from '../store/filterStore';
 import {
   VIGILANCIA_DEFAULT_ANO_FIM,
@@ -153,14 +153,16 @@ function useHubStats(): { mortalidade: HubStat[]; vigilancia: HubStat[] } {
     }),
   });
 
-  const latestYearStat = (
+  // Matches KpiStrip's "Total de óbitos / internações": sum over the default period.
+  const periodoIndicadores = `${DEFAULT_STATE.ano_inicio}–${DEFAULT_STATE.ano_fim}`;
+  const periodTotalStat = (
     query: UseQueryResult<IndicadorResponse[]>,
     noun: string,
   ): HubStat => {
-    if (query.isLoading) return { value: '…', label: noun };
-    const { latestYear, latestYearRows } = selectLatestYearRows(query.data ?? []);
-    if (query.isError || latestYear == null) return { value: '—', label: noun };
-    return { value: formatCount(sumTotalEventos(latestYearRows)), label: `${noun} em ${latestYear}` };
+    const label = `${noun} · ${periodoIndicadores}`;
+    if (query.isLoading) return { value: '…', label };
+    if (query.isError || !query.data || query.data.length === 0) return { value: '—', label };
+    return { value: formatCount(sumTotalEventos(query.data)), label };
   };
 
   const periodo = `${VIGILANCIA_DEFAULT_ANO_INICIO}–${VIGILANCIA_DEFAULT_ANO_FIM}`;
@@ -179,8 +181,8 @@ function useHubStats(): { mortalidade: HubStat[]; vigilancia: HubStat[] } {
 
   return {
     mortalidade: [
-      latestYearStat(indicadorQueries[0], 'Óbitos'),
-      latestYearStat(indicadorQueries[1], 'Internações'),
+      periodTotalStat(indicadorQueries[0], 'Óbitos'),
+      periodTotalStat(indicadorQueries[1], 'Internações'),
     ],
     vigilancia: [
       { value: notificacoesValue, label: notificacoesLabel },

@@ -6,7 +6,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Hub from './Hub';
 
-// SIM: latest year 2023 → 200 + 50 = 250. SIH: 2023 → 1.000 + 234 = 1.234.
+// SIM period total: 100 + 200 + 50 = 350. SIH: 1.000 + 234 = 1.234.
 // SINAN (all three agravos, default period): 1.000 + 500 + 300 + 200 = 2.000.
 const INDICADORES: Record<string, object[]> = {
   SIM: [
@@ -145,12 +145,12 @@ describe('Hub', () => {
     expect((await screen.findByTestId('location-probe')).textContent).toBe('/vigilancia');
   });
 
-  it('shows latest-year óbitos and internações totals from /indicadores, like the dashboard KPI', async () => {
+  it('shows period óbitos and internações totals from /indicadores, like the dashboard KPI', async () => {
     renderHub();
-    expect(await screen.findByText('250')).toBeTruthy();
-    expect(screen.getByText('Óbitos em 2023')).toBeTruthy();
+    expect(await screen.findByText('350')).toBeTruthy();
+    expect(screen.getByText('Óbitos · 2015–2023')).toBeTruthy();
     expect(await screen.findByText('1.234')).toBeTruthy();
-    expect(screen.getByText('Internações em 2023')).toBeTruthy();
+    expect(screen.getByText('Internações · 2015–2023')).toBeTruthy();
   });
 
   it('shows total SINAN notificações summed across the three agravos for the default period', async () => {

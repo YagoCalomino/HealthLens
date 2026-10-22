@@ -4,6 +4,20 @@ import { filterReliableRows } from '../lib/reliability';
 import { selectLatestYearRows, sumTotalEventos } from '../lib/latestYear';
 import { KpiCard } from './KpiCard';
 
+function nationalTaxaByAno(rows: IndicadorResponse[]): Map<number, number> {
+  const totals = new Map<number, { eventos: number; populacao: number }>();
+  for (const r of rows) {
+    if (r.populacao == null || r.populacao <= 0) continue;
+    const t = totals.get(r.ano) ?? { eventos: 0, populacao: 0 };
+    t.eventos += r.total_eventos ?? 0;
+    t.populacao += r.populacao;
+    totals.set(r.ano, t);
+  }
+  const taxas = new Map<number, number>();
+  for (const [ano, t] of totals) taxas.set(ano, (t.eventos / t.populacao) * 100000);
+  return taxas;
+}
+
 // ---------------------------------------------------------------------------
 // KpiStrip — exported component
 // ---------------------------------------------------------------------------
@@ -30,17 +44,15 @@ export function KpiStrip({
   indicador,
   coberturaTotal,
 }: KpiStripProps): React.ReactElement {
-  // KPI #1 and #2 reflect only the latest reliable year (see lib/latestYear.ts).
+  // KPI #2 reflects only the latest reliable year (see lib/latestYear.ts).
   const { latestYearRows } = selectLatestYearRows(rows);
 
   // -------------------------------------------------------------------------
-  // KPI #1 — Total, latest year only
+  // KPI #1 — Total over the selected period (every year present in rows)
   // -------------------------------------------------------------------------
   const totalValue =
-    latestYearRows.length === 0
-      ? '—'
-      : sumTotalEventos(latestYearRows).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-  const kpi1Label = indicador === 'SIM' ? 'Total de óbitos' : 'Total de internações';
+    rows.length === 0 ? '—' : sumTotalEventos(rows).toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+  const kpi1Label = `${indicador === 'SIM' ? 'Total de óbitos' : 'Total de internações'} · ${anoInicio}–${anoFim}`;
 
   // -------------------------------------------------------------------------
   // KPI #2 — Taxa média (population-weighted, latest year only)
@@ -92,10 +104,13 @@ export function KpiStrip({
   if (isNational && rows.length > 0) {
     // Exclude partial-coverage years so a near-zero baseline doesn't blow up the
     // percentage — same per-location median guard as trendByKey in App.tsx.
+    // Rows are one per (UF, ano): compare the national rate (Σ eventos / Σ população)
+    // of the first and last years, never one UF's row against another UF's.
     const reliable = filterReliableRows(rows, (r) => r.codigo_ibge ?? r.sigla_uf);
-    const sorted = reliable.slice().sort((a, b) => a.ano - b.ano);
-    const firstTaxa = sorted.length >= 2 ? sorted[0]?.taxa_por_100k : null;
-    const lastTaxa = sorted.length >= 2 ? sorted[sorted.length - 1]?.taxa_por_100k : null;
+    const taxaPorAno = nationalTaxaByAno(reliable);
+    const anos = Array.from(taxaPorAno.keys()).sort((a, b) => a - b);
+    const firstTaxa = anos.length >= 2 ? taxaPorAno.get(anos[0]) ?? null : null;
+    const lastTaxa = anos.length >= 2 ? taxaPorAno.get(anos[anos.length - 1]) ?? null : null;
     if (firstTaxa != null && lastTaxa != null && firstTaxa !== 0) {
       const pct = ((lastTaxa - firstTaxa) / Math.abs(firstTaxa)) * 100;
       variationValue = `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
