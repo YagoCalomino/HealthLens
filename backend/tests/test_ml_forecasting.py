@@ -16,6 +16,7 @@ from ml.run_forecasting import (
     _ANO_REFERENCIA,
     _ANOS_FULL,
     _FORECAST_ANOS,
+    _aggregate_uf_series,
     select_model_for_series,
 )
 
@@ -215,3 +216,37 @@ def test_prophet_dual_ci():
         "yhat_lower for interval_width=0.80 and 0.95 should differ — "
         "ensure two separate Prophet fits are performed (not one reused)"
     )
+
+
+# ---------------------------------------------------------------------------
+# UF aggregation regression guard
+# ---------------------------------------------------------------------------
+
+
+def test_uf_rate_is_not_multiplied_by_municipio_count(tmp_path):
+    """UF taxa = UF óbitos / UF population — not N_municípios times that.
+
+    UF 31 has 3 municípios of 10.000 people each (30.000 total) and 30 óbitos in
+    2020, so the rate is 100 per 100k. The previous query joined the UF total to
+    each município's population row before summing, which reported 300.
+    """
+    obitos = pd.DataFrame(
+        {
+            "CODMUNRES": ["310010"] * 10 + ["310020"] * 10 + ["310030"] * 10,
+            "DTOBITO": ["15062020"] * 30,
+        }
+    )
+    parquet_path = tmp_path / "sim.parquet"
+    obitos.to_parquet(parquet_path)
+    pop_df = pd.DataFrame(
+        {
+            "codigo_ibge_6": ["310010", "310020", "310030"],
+            "ano": [2020, 2020, 2020],
+            "populacao_total": [10_000, 10_000, 10_000],
+        }
+    )
+
+    result = _aggregate_uf_series(str(parquet_path), pop_df)
+
+    assert list(result["unique_id"]) == ["31"]
+    assert result["y"].iloc[0] == pytest.approx(100.0)

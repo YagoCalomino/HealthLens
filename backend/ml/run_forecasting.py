@@ -184,6 +184,56 @@ def _aggregate_series(
     return df[["unique_id", "ds", "y"]].dropna(subset=["y"])
 
 
+def _aggregate_uf_series(parquet_path: str, pop_df: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate SIM Parquet records into annual taxa_por_100k series per UF.
+
+    Óbitos and population are each summed to (UF, ano) *before* the join. Joining the
+    UF óbitos total against per-município population rows and summing afterwards
+    counts the óbitos once per município, inflating the rate by the UF's município
+    count (MG: ~853x).
+
+    Returns columns: unique_id (str, 2-digit codigo_uf), ds (datetime64), y (float).
+    """
+    con = duckdb.connect()
+    con.register("dim_populacao_csv", pop_df)
+    df = con.execute(
+        """
+        WITH uf_obitos AS (
+            SELECT SUBSTRING(CODMUNRES, 1, 2)                     AS codigo_uf,
+                   CAST(SUBSTRING(DTOBITO, 5, 4) AS INT)          AS ano,
+                   COUNT(*)                                       AS total_obitos
+            FROM read_parquet(?)
+            WHERE DTOBITO IS NOT NULL
+              AND LENGTH(DTOBITO) = 8
+              AND CAST(SUBSTRING(DTOBITO, 5, 4) AS INT) BETWEEN 2015 AND 2024
+              AND CODMUNRES IS NOT NULL
+            GROUP BY 1, 2
+        ),
+        uf_populacao AS (
+            SELECT SUBSTRING(codigo_ibge_6, 1, 2) AS codigo_uf,
+                   ano,
+                   SUM(populacao_total)          AS populacao_total
+            FROM dim_populacao_csv
+            GROUP BY 1, 2
+        )
+        SELECT
+            o.codigo_uf,
+            o.ano,
+            o.total_obitos * 100000.0 / NULLIF(p.populacao_total, 0) AS taxa_por_100k
+        FROM uf_obitos o
+        LEFT JOIN uf_populacao p
+            ON p.codigo_uf = o.codigo_uf AND p.ano = o.ano
+        ORDER BY o.codigo_uf, o.ano
+        """,
+        [parquet_path],
+    ).df()
+    con.close()
+
+    df["ds"] = pd.to_datetime(df["ano"].astype(str) + "-12-31")
+    df = df.rename(columns={"codigo_uf": "unique_id", "taxa_por_100k": "y"})
+    return df[["unique_id", "ds", "y"]].dropna(subset=["y"])
+
+
 # ---------------------------------------------------------------------------
 # AutoARIMA runner (per municipality)
 # ---------------------------------------------------------------------------
@@ -665,39 +715,7 @@ def run_forecasting(conn) -> dict:
     # ------------------------------------------------------------------
     # 4. Build UF-level series by aggregating from municipality Parquet
     # ------------------------------------------------------------------
-    con = duckdb.connect()
-    con.register("dim_populacao_csv", pop_df)
-    uf_df = con.execute(
-        """
-        WITH uf_annual AS (
-            SELECT SUBSTRING(CODMUNRES, 1, 2)                       AS codigo_ibge_6,
-                   CAST(SUBSTRING(DTOBITO, 5, 4) AS INT)          AS ano,
-                   COUNT(*)                                        AS total_obitos
-            FROM read_parquet(?)
-            WHERE DTOBITO IS NOT NULL
-              AND LENGTH(DTOBITO) = 8
-              AND CAST(SUBSTRING(DTOBITO, 5, 4) AS INT) BETWEEN 2015 AND 2024
-              AND CODMUNRES IS NOT NULL
-            GROUP BY SUBSTRING(CODMUNRES, 1, 2), SUBSTRING(DTOBITO, 5, 4)
-        )
-        SELECT
-            u.codigo_ibge_6,
-            u.ano,
-            SUM(u.total_obitos) * 100000.0 / NULLIF(SUM(p.populacao_total), 0) AS taxa_por_100k
-        FROM uf_annual u
-        LEFT JOIN dim_populacao_csv p
-            ON SUBSTRING(p.codigo_ibge_6, 1, 2) = u.codigo_ibge_6 AND p.ano = u.ano
-        GROUP BY u.codigo_ibge_6, u.ano
-        ORDER BY u.codigo_ibge_6, u.ano
-        """,
-        [sim_parquet],
-    ).df()
-    con.close()
-
-    uf_df["ds"] = pd.to_datetime(uf_df["ano"].astype(str) + "-12-31")
-    uf_series = uf_df.rename(
-        columns={"codigo_ibge_6": "unique_id", "taxa_por_100k": "y"}
-    )[["unique_id", "ds", "y"]].dropna(subset=["y"])
+    uf_series = _aggregate_uf_series(sim_parquet, pop_df)
     logger.info(
         "UF aggregation complete: %d UF series", uf_series["unique_id"].nunique()
     )
