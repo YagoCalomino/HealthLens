@@ -199,7 +199,7 @@ function DashboardContent({ onRegisterExport }: DashboardContentProps): React.Re
               <TimeSeriesChart />
             </ErrorBoundary>
           </div>
-          {indicador === 'SIH' && ano_inicio <= 2022 && ano_fim >= 2021 && (
+          {ano_inicio <= 2022 && ano_fim >= 2021 && (
             <p
               role="note"
               style={{
