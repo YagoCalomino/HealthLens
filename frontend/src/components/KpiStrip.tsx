@@ -114,7 +114,7 @@ export function KpiStrip({
   const kpi4Value = isNational
     ? (variationValue ?? '—')
     : lastForecastVal != null
-    ? lastForecastVal.toFixed(1)
+    ? Math.round(lastForecastVal).toLocaleString('pt-BR')
     : '—';
 
   const kpi4Delta = isNational ? variationDelta : forecastDelta;
